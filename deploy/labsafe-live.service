@@ -1,0 +1,44 @@
+# /etc/systemd/system/labsafe-live.service -- the lab safety system as a long-running service on the Orange Pi.
+# Installed by scripts/install_live_service.sh (needs sudo). Dashboard stays bound to 127.0.0.1:8000 (SSH tunnel: make dashboard-tunnel).
+[Unit]
+Description=Lab Safety Edge AI (live system: detector on NPU, zone rule, dashboard)
+After=network.target
+# Never give up: with the camera unplugged at boot the old limit (5 starts / 5 min) left the service FAILED until someone ran sudo
+# (21/10). A missing camera is the common case, a broken model is not; RestartSec below keeps the retry rate low.
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+User=orangepi
+WorkingDirectory=/home/orangepi/AI_Challenge
+Environment=PYTHONPATH=src
+# DDR clock pinned to its maximum while the service runs (KNOWN_ISSUES #39, docs/results.md 6c): the default governor leaves DDR at 1068 MHz,
+# which costs ~2 FPS and the latency tail. `+` = run as root although User=orangepi. Restored when the service stops.
+ExecStartPre=+/bin/sh -c 'echo performance > /sys/class/devfreq/dmc/governor'
+ExecStopPost=+/bin/sh -c 'echo dmc_ondemand > /sys/class/devfreq/dmc/governor'
+# which config runs: standard by default; `bash scripts/live_config.sh demo|standard` writes live.env (owned by orangepi, so switching
+# needs no edit of this root-owned unit, only a restart). The file's value wins over Environment=.
+Environment=LABSAFE_CONFIG=configs/live/dashboard_lab_board.yaml
+EnvironmentFile=-/home/orangepi/AI_Challenge/live.env
+ExecStart=/usr/bin/python3 -m labsafe.app --config ${LABSAFE_CONFIG} --classes configs/classes_lab_v3.yaml --no-display --gpio off
+# the app stops cleanly on SIGINT (finishes the current frame, closes files); the default SIGTERM would not
+KillSignal=SIGINT
+TimeoutStopSec=30
+# restart on a crash; a deliberate clean exit (exit 0) is not restarted
+Restart=on-failure
+RestartSec=10
+# a 10 h overnight log showed RSS flat at 215-250 MB after the first hour (docs/results.md 6e), so no 6 h restart is needed; one controlled
+# restart per day is kept as housekeeping (its stop counts as a failure -> restarted). Each restart cost 3 starts once (#46): do not shorten this.
+RuntimeMaxSec=24h
+# a leak must not take the whole board down: the kernel kills only this service at the cap, systemd restarts it
+MemoryMax=1500M
+MemorySwapMax=0
+NoNewPrivileges=true
+PrivateTmp=true
+# own log file: the board's journal (zram, ~18 MB) is flooded by a hostapd restart loop (~80 lines/min) and keeps only the last ~40 lines of this service (KNOWN_ISSUES #46)
+StandardOutput=append:/home/orangepi/AI_Challenge/runs/labsafe-live.log
+StandardError=append:/home/orangepi/AI_Challenge/runs/labsafe-live.log
+SyslogIdentifier=labsafe-live
+
+[Install]
+WantedBy=multi-user.target

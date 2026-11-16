@@ -1,0 +1,739 @@
+% Báo cáo kỹ thuật — dịch bằng tectonic (XeTeX):  make report-pdf
+% Mọi số liệu lấy từ docs/results.md và KNOWN_ISSUES.md (mỗi bảng ghi mục nguồn). Hình vẽ chỉ dùng đen/trắng.
+\documentclass[12pt,a4paper]{article}
+\usepackage{fontspec}
+\setmainfont{Liberation Serif}
+\setsansfont{Liberation Sans}
+\setmonofont{DejaVu Sans Mono}[Scale=0.82]
+\usepackage{polyglossia}
+\setmainlanguage{vietnamese}
+\usepackage[a4paper,margin=2.5cm]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs,array,tabularx,multirow}
+\usepackage{graphicx}
+\usepackage{caption}
+\usepackage{enumitem}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,shapes.geometric,fit,calc,patterns}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.17}
+\usepgfplotslibrary{groupplots}
+\usepackage[hidelinks]{hyperref}
+\usepackage{setspace}
+\setstretch{1.12}
+\setlength{\parindent}{1.2em}
+\setlength{\parskip}{0.2em}
+\captionsetup{font=small,labelfont=bf,labelsep=period}
+\setlist{itemsep=1pt,topsep=3pt}
+\newcommand{\file}[1]{\texttt{\small #1}}
+\newcommand{\num}[1]{#1}
+\renewcommand{\arraystretch}{1.15}
+
+% ---------- phong cách hình vẽ: đen, nét mảnh, không màu ----------
+\tikzset{
+  box/.style={draw=black,line width=0.7pt,rectangle,align=center,minimum height=9mm,inner sep=3pt,font=\small},
+  boxw/.style={box,minimum width=27mm},
+  async/.style={box,dash pattern=on 3pt off 2pt},
+  grp/.style={draw=black,line width=0.5pt,dotted,rounded corners=2pt,inner sep=5pt},
+  arr/.style={-{Stealth[length=2.4mm]},line width=0.7pt},
+  darr/.style={-{Stealth[length=2.4mm]},line width=0.7pt,dash pattern=on 3pt off 2pt},
+  lab/.style={font=\scriptsize,inner sep=1pt}
+}
+
+\begin{document}
+
+% ======================================================================
+\begin{titlepage}
+\centering
+\vspace*{2.2cm}
+{\large EDGE AI DESIGN CHALLENGE 2026}\\[1.2cm]
+{\LARGE\bfseries Hệ thống AI biên đa tác vụ\\giám sát an toàn phòng thí nghiệm\\theo thời gian thực trên Orange Pi 5}\\[0.9cm]
+{\large Multi-task edge AI for real-time laboratory safety monitoring\\on a Rockchip RK3588S NPU}\\[2.6cm]
+{\large Báo cáo kỹ thuật}\\[0.6cm]
+{\large \textbf{Nhóm trưởng:} Lê Tự Thiện An}\\[0.2cm]
+{\large \textbf{Thành viên:} Trịnh Anh Văn, Võ Nhật Nam, Phạm Trọng Thành}\\[2.8cm]
+\begin{minipage}{0.82\textwidth}
+\small\textbf{Tóm tắt.}
+Chúng tôi xây dựng một hệ thống chạy hoàn toàn trên thiết bị biên (Orange Pi 5, camera Logitech C270, không cần
+mạng) để phát hiện người trong phòng thí nghiệm, nhận biết người có mặc áo blouse hay không, và cảnh báo khi người
+\emph{không} mặc áo blouse bước vào vùng nguy hiểm. Hệ thống có tích hợp nguyên mẫu lửa/khói và té ngã, nhưng hai
+tác vụ này chưa được đánh giá thực địa nên đã tắt trong sản phẩm. Model YOLO26n được lượng tử hóa INT8 và chạy trên NPU: riêng tầng phát hiện
+chính nhanh gấp khoảng 2,9 lần CPU và chạm trần tốc độ của camera (30 khung/giây); dashboard live đạt 25,9 khung/giây,
+trong khi CPU chạy liên tục lên tới 86,8\,$^\circ$C. Chế độ \emph{thích nghi} (chỉ gọi model phụ khi cần) giảm công
+tính toán 2,3 lần và giữ SoC mát hơn 12,8\,$^\circ$C so với chạy hết mọi tầng; đồng hồ USB-C đo bo mạch dùng 1,98\,W so với 3,34\,W (nghỉ 0,86\,W, sản phẩm 2,20\,W, sai số khoảng 10\%). Khi đưa ra phòng thí nghiệm thật, chúng tôi gặp và đo một rủi ro lớn: ở một góc camera rất khác dữ liệu huấn luyện, model đang dùng
+\emph{không nhận được áo blouse ở khung hình nào}; đặt camera về góc đã huấn luyện thì áo được nhận ở khoảng 98\% số lần thăm dò
+trên bốn người mặc áo (một phiên 25 giây, chưa phải độ chính xác). Phần lớn báo cáo trình bày những gì
+\emph{đã đo} cùng cách đo, và liệt kê rõ những gì chưa đo (công suất khi có camera thật, té ngã và lửa/khói trong
+phòng thí nghiệm thật).
+\end{minipage}
+\vfill
+{\small Tháng 10 năm 2026}
+\end{titlepage}
+
+\tableofcontents
+\newpage
+
+% ======================================================================
+\section{Bài toán và mục tiêu}
+
+Trong phòng thí nghiệm hóa--sinh, áo blouse là lớp bảo vệ đầu tiên. Việc nhắc nhở thủ công không theo dõi liên tục
+được, trong khi đưa video lên máy chủ đám mây vừa tốn băng thông vừa lộ hình ảnh người. Vì vậy chúng tôi đặt ra
+bốn yêu cầu:
+
+\begin{enumerate}
+  \item \textbf{Chạy tại chỗ.} Toàn bộ suy luận trên một bo mạch giá rẻ, không phụ thuộc mạng.
+  \item \textbf{Thời gian thực.} Theo kịp camera 30 khung/giây, độ trễ xử lý một khung dưới 50\,ms.
+  \item \textbf{Đúng tác vụ.} Cảnh báo khi người \emph{không mặc áo blouse đứng trong vùng nguy hiểm}; vùng do người
+        dùng tự vẽ lại được khi đổi chỗ đặt camera.
+  \item \textbf{Số liệu trung thực.} Mỗi con số có cách đo, có độ dao động, và có mục ``chưa đo''.
+\end{enumerate}
+
+Câu hỏi nghiên cứu xuyên suốt là \emph{cách ánh xạ nhiều tác vụ lên các đơn vị tính toán khác nhau} của
+RK3588S (4 nhân Cortex-A76, 4 nhân Cortex-A55, GPU Mali-G610, NPU 3 nhân 6\,TOPS) sao cho vẫn đạt tốc độ camera mà tốn ít
+công tính toán nhất.
+
+% ======================================================================
+\section{Kiến trúc hệ thống}
+
+\subsection{Phần cứng}
+
+Thiết bị: Orange Pi 5 (RK3588S, 8\,GB RAM), camera USB Logitech C270 độ phân giải $640\times480$ ở 30 khung/giây
+(MJPG), nguồn 5\,V/4\,A. Phần mềm: RKNN-Toolkit2 2.3.2 (chuyển đổi trên máy x86), RKNN-Toolkit-Lite2 và \texttt{librknnrt}
+2.3.2 trên bo mạch, Python 3.10.
+
+\subsection{Luồng xử lý một khung hình}
+
+Hình~\ref{fig:pipeline} là luồng xử lý. Tầng A (phát hiện người và áo blouse) chạy trên \emph{mọi} khung. Tầng B kiểm
+tra thuộc tính trên ảnh cắt từng người (mỗi người 2 giây một lần) được dùng làm khối lượng thử nghiệm khi so sánh chế
+độ thích nghi với chạy hết; nó tắt trong cấu hình sản phẩm vì chưa có dữ liệu kính/găng ở lab. Tầng C phát hiện
+lửa/khói trên toàn khung ở 1\,Hz đã được tích hợp nhưng chưa được đánh giá trong lab. Khi bật, hai tầng phụ chạy bất
+đồng bộ trên nhân NPU riêng nên không cộng vào thời gian của khung.
+
+\begin{figure}[ht]
+\centering
+\begin{tikzpicture}
+  % hàng chính (trái -> phải), hàng dưới (phải -> trái)
+  \node[boxw] (cam) at (0,0) {Camera C270\\$640{\times}480$, 30 FPS};
+  \node[boxw] (rd)  at (3.95,0) {Luồng đọc ảnh\\(chờ ảnh mới)};
+  \node[boxw] (a)   at (7.9,0) {\textbf{Tầng A}\\YOLO26n INT8\\NPU lõi 0};
+  \node[boxw] (trk) at (11.85,0) {Bộ bám người\\(IoU + khoảng cách)};
+  \node[boxw] (att) at (11.85,-2.3) {Gán áo cho người\\(theo diện tích)};
+  \node[boxw] (rule) at (7.9,-2.3) {Luật vùng\\Té ngã};
+  \node[boxw] (deb) at (3.95,-2.3) {Chống rung 3\,s\\nghỉ 60\,s};
+  \node[boxw] (web) at (0,-2.3) {Trang web, ảnh\\bằng chứng, đèn/OLED,\\tin Zalo};
+  \node[async,minimum width=27mm] (c) at (3.95,2.3) {\textbf{Tầng C}\\lửa / khói, 1\,Hz\\NPU lõi 2};
+  \node[async,minimum width=27mm] (b) at (7.9,2.3) {\textbf{Tầng B}\\thuộc tính trên\\ảnh cắt người, NPU lõi 1};
+  \draw[arr] (cam)--(rd);
+  \draw[arr] (rd)--(a);
+  \draw[arr] (a)--(trk);
+  \draw[arr] (trk)--(att);
+  \draw[arr] (att)--(rule);
+  \draw[arr] (rule)--(deb);
+  \draw[arr] (deb)--(web);
+  \draw[darr] (rd.north)--(c.south) node[lab,midway,right=1mm] {toàn khung};
+  \draw[darr] (a.north)--(b.south) node[lab,midway,right=1mm] {khung người};
+\end{tikzpicture}
+\caption{Luồng xử lý. Nét liền: chạy trên mọi khung. Nét đứt: chạy bất đồng bộ trên nhân NPU riêng, kết quả (đưa vào bước chống rung cùng
+các sự kiện khác) đến trễ tối đa một chu kỳ kiểm tra (tầng B 2\,s, tầng C 1\,s) và không làm chậm khung.}
+\label{fig:pipeline}
+\end{figure}
+
+\subsection{Quy tắc cảnh báo}
+
+Hệ thống xét \emph{vị trí chân} của mỗi người: điểm giữa cạnh dưới khung $p=\big(\tfrac{x_1+x_2}{2},\,y_2\big)$,
+thay vì tâm khung, vì người đứng ngay sau một vùng có tâm khung trôi vào trong vùng. Người nằm trong vùng $Z$ nếu $p$
+thuộc đa giác $Z$ (thuật toán tia, đa giác chuẩn hóa về $[0,1]^2$ để không phụ thuộc độ phân giải). Một người bị coi
+là \emph{có mặc áo blouse} nếu trong cửa sổ nhớ $T_m=2$\,s có ít nhất một khung áo $g$ thỏa
+\begin{equation}
+  f(g,d)=\frac{|g\cap d|}{|g|}\;\ge\;0{,}5
+  \quad\text{và}\quad
+  \operatorname{conf}(g)\ge\tau,
+\end{equation}
+với $d$ là khung của người đó; mỗi khung áo chỉ được gán cho \emph{một} người có $f$ lớn nhất (để hai người đứng sát
+nhau không ``mượn'' áo của nhau). Ngưỡng tin cậy riêng cho áo $\tau$ được đặt cao hơn ngưỡng của người, vì một khung
+áo sai làm một người vi phạm lọt qua --- hướng sai nguy hiểm hơn báo nhầm. Cảnh báo chỉ phát khi sự kiện kéo dài
+$T_d=3$\,s (chống rung; một khung vắng sự kiện dưới 1\,s không xóa tiến độ chống rung, vì chỉ cần một khung model bỏ sót áo là đồng hồ 3\,s
+bắt đầu lại và cảnh báo không bao giờ phát) rồi im lặng $T_c=60$\,s với cùng một người (chống báo lặp).
+
+\paragraph{Chỉ phán khi nhìn thấy quần áo.} ``Không thấy áo'' không đồng nghĩa với ``không mặc áo''. Một người chỉ lộ mặt ở mép khung,
+một người bị che sau người đứng gần camera hơn, hay một khung quá nhỏ hoặc quá mảnh, đều được đánh dấu \emph{chưa thấy rõ áo}
+(khung xám trên video) và \emph{không} bị tính là vi phạm. Một người bị coi là che khi hơn 40\% khung của họ nằm sau một người có chân thấp hơn
+(gần camera hơn); khung dưới 24 điểm ảnh chiều rộng, hoặc thấp hơn 22\% chiều cao ảnh mà không có dáng người cao, cũng bị loại. Người chạm mép
+dưới ảnh với chiều cao dưới 30\% chiều cao ảnh (chỉ lộ đầu) không được xét vùng. Trên tập kiểm tra (model FP32, $\tau=0{,}6$) quy tắc này
+giữ nguyên tỉ lệ bắt ở góc 1 (78\%) và giảm báo nhầm từ 7\% xuống 6\%; ở góc 2 báo nhầm giảm từ 8\% xuống 2\% nhưng chỉ còn 18 người không
+áo được chấm nên không kết luận được tỉ lệ bắt. Trên một video lab đông người dài 170\,s, số cảnh báo giảm từ 31 xuống 6, cả 6 đều
+đúng. Cái giá: người bị che không bị phán cho tới khi lộ thân.
+
+\paragraph{Bộ bám người.} Mỗi khung người được ghép với một người đã có theo độ chồng khung $\text{IoU}\ge0{,}3$; khung chưa ghép được thử
+ghép theo khoảng cách tâm (không quá 1,2 lần đường chéo khung). Người mất dấu được giữ mã định danh tối đa 3\,s, vì với 1,5\,s một buổi chạy
+15 phút đã sinh 24 mã cho 2--4 người, mỗi mã mới là một cảnh báo và một ảnh mới của cùng một người. Khi một khung chỉ ghép được bằng khoảng
+cách tâm (không chồng khung) thì trí nhớ áo của mã đó bị xóa, để người khác nhận mã không thừa hưởng áo của người trước.
+
+\subsection{Giao diện}
+
+Hệ thống phục vụ một trang web tiếng Việt qua đường hầm SSH (không mở ra mạng): bộ đếm người, số người mặc/không mặc
+áo, số người trong vùng nguy hiểm, video có vẽ khung, biểu đồ 15 phút, và lịch sử cảnh báo kèm \emph{ảnh cắt riêng
+người vi phạm} (lưu thành tệp làm bằng chứng). Khi đổi chỗ đặt camera, người dùng \emph{vẽ lại vùng nguy hiểm ngay
+trên video}; vùng áp dụng ở khung kế tiếp, được kiểm tra đầu vào (tên, mức độ, số điểm, tọa độ trong $[0,1]$) và chỉ
+nhận yêu cầu từ chính trang đó.
+
+\paragraph{Bốn trạng thái, một nguyên tắc.} Trang, đèn và màn OLED cùng dùng bốn trạng thái: \textbf{AN TOÀN} (camera đang gửi hình và không có vi phạm),
+\textbf{CHÚ Ý} (có người không mặc áo ngoài vùng, hoặc một vi phạm đang được xác nhận, hoặc vừa có cảnh báo), \textbf{BÁO ĐỘNG} (người không áo trong vùng
+sau thời gian chống rung) và \textbf{MẤT TÍN HIỆU} (không có khung mới quá 3\,s). Nguyên tắc: \emph{không bao giờ hiện AN TOÀN khi không có hình}.
+Trên video, mỗi người có một khung màu: xanh (có áo, kèm điểm áo), cam (không áo, ngoài vùng), đỏ (vi phạm), xám (chưa thấy rõ áo); vùng nguy hiểm được tô tím.
+Chữ tiếng Việt có dấu vẽ bằng phông đi kèm. Chế độ trình chiếu (phím P) phóng to video và giữ ảnh cảnh báo mới nhất cho phòng chiếu.
+
+\paragraph{Đèn LED và màn OLED trên bo mạch.} Ba đèn LED (xanh, vàng, đỏ) và một màn OLED $128\times64$ (giao tiếp I2C) nối thẳng vào chân mở rộng 26 chân của
+Orange Pi 5, để người đứng cạnh thiết bị biết trạng thái mà không cần mở máy tính: xanh sáng khi AN TOÀN, vàng khi CHÚ Ý (và nháy chậm khi MẤT TÍN HIỆU), đỏ nháy khi
+BÁO ĐỘNG, lúc đó màn OLED cũng nháy đảo màu và ghi số người vi phạm. Phần điều khiển chạy ở luồng riêng, chỉ lưu vài con số mỗi khung, nên không
+cộng vào thời gian xử lý khung; thiếu dây hay thiếu quyền chỉ ghi một dòng cảnh báo rồi bỏ thiết bị đó, việc giám sát vẫn chạy.
+
+\paragraph{Tin nhắn Zalo (tùy chọn).} Khi có cảnh báo đã qua chống rung, bo mạch gửi một tin chữ vào Zalo của người phụ trách (người nào, vùng nào, mấy giờ);
+nhiều cảnh báo trong 10\,s được gộp thành một tin. Việc gửi chạy ở luồng riêng, mất mạng thì bỏ tin đó và không làm chậm nhận diện. Đây là
+phần \emph{duy nhất} cần Internet: nhận diện, luật cảnh báo, đèn, màn OLED và ảnh bằng chứng đều chạy không cần mạng. Chúng tôi chủ động chỉ gửi chữ: Zalo
+chỉ nhận ảnh qua đường dẫn công khai, nghĩa là phải đưa ảnh người lên một máy chủ của bên thứ ba, nên ảnh bằng chứng chỉ nằm trên bo mạch và xem qua trang web.
+
+% ======================================================================
+\section{Tối ưu hóa và tăng tốc}
+
+\subsection{Từ CPU sang NPU INT8}
+
+\begin{table}[ht]
+\centering
+\caption{Tầng A (phát hiện người), cùng model YOLO26n, đo trên bo mạch thật.}
+\label{tab:npu}
+\begin{tabular}{lrrp{4.6cm}}
+\toprule
+Cấu hình & FPS & Suy luận/khung & Nhiệt độ SoC \\
+\midrule
+CPU, ONNX FP32 & 10,5 & 90,9\,ms & 86,8\,$^\circ$C sau $\approx$2 phút, chưa bão hòa \\
+NPU, RKNN FP16 & 19,8 & 47,8\,ms & --- \\
+NPU, RKNN INT8 & $\approx$29--30 (trần camera) & 25,1\,ms & 47--50\,$^\circ$C khi chạy dài \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Bảng~\ref{tab:npu} cho thấy ba điều. (i) INT8 nhanh khoảng 1,9 lần FP16 (cùng phiên đo; FP16 đo ở hai thời điểm cho
+47,8 và 63,2\,ms nên chỉ so sánh trong cùng phiên). (ii) Hệ thống \emph{chạm trần camera}: tốc độ tổng bị giới hạn bởi
+\begin{equation}
+  \mathrm{FPS}=\min\!\Big(f_{\text{cam}},\;\frac{1}{T_{\text{khung}}}\Big),
+\end{equation}
+nên khi $1/T_{\text{khung}}>f_{\text{cam}}=30$ thì tối ưu thêm phần suy luận không tăng FPS (NPU lõi 0 còn dư khoảng
+27\%). (iii) Luận cứ độc lập với FPS: CPU không giữ được nhiệt độ khi chạy liên tục (vượt 75\,$^\circ$C sau
+khoảng 2 phút), còn NPU thì giữ được.
+
+\subsection{Các tối ưu trong pipeline}
+
+\begin{table}[ht]
+\centering
+\caption{Từng tối ưu, trước và sau (mục nguồn ở cột cuối, xem \file{KNOWN\_ISSUES.md}).}
+\label{tab:opt}
+\begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X r}
+\toprule
+Kỹ thuật & Trước & Sau & Mục \\
+\midrule
+Giải mã chỉ các lớp cần giữ & 2,1\,ms (FP16), 2,6\,ms (INT8) & 0,38\,ms, 0,90\,ms & \#30 \\
+Tầng B, C bất đồng bộ, mỗi tầng một nhân NPU & độ trễ p99 61,2\,ms, lớn nhất 78,6\,ms & p99 \textbf{49,9\,ms}, lớn nhất 58,3\,ms & \#30 \\
+Camera chờ ảnh mới thay vì đọc lặp & 37 FPS ``thổi phồng'', 20\% suy luận lại ảnh cũ & 29,6 FPS thật, 0\% trùng & \#31 \\
+Chống báo lặp (nghỉ 60\,s, bộ bám nhớ 3\,s) & 122 cảnh báo / 14,5 phút & 24 cảnh báo / 9,5 phút & \#37 \\
+Danh sách thống kê chạy dài có cửa sổ & tăng không giới hạn & giữ 10 phút gần nhất & \#37 \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Một điểm đáng chú ý của tầng B/C bất đồng bộ: trung bình gần như không đổi (nhờ chu kỳ kiểm tra, B+C chỉ tốn khoảng
+0,8\,ms/khung), nhưng \emph{đuôi} độ trễ giảm 18\%, vì khung nào trùng lượt B hoặc C trước đây phải trả thêm 11--14\,ms.
+Ngoài ra mỗi lần gọi một model nhỏ có chi phí cố định khoảng 10\,ms (tầng B chỉ nhỏ hơn tầng A khoảng 2,4 lần dù ảnh vào
+nhỏ hơn 4 lần), nên ``model nhỏ'' không tự động là ``rẻ''.
+
+\subsection{Cổng kiểm tra khi chuyển model sang NPU}
+
+Chuyển model sang NPU có thể hỏng \emph{im lặng}: tốc độ vẫn tốt, ``có phát hiện'', nhưng kết quả sai. Chúng tôi gặp
+bốn lỗi như vậy (đầu ra không cần giải mã end-to-end gây lỗi bộ nhớ; INT8 không phát hiện gì; chuẩn hóa ảnh hai lần;
+tọa độ INT8 bị chia cho kích thước ảnh --- bản đầu cho 49 phát hiện, 0 khớp) và chặn bằng một \emph{cổng parity}:
+chạy cùng ảnh qua bản ONNX và bản NPU, ghép khung theo IoU, rồi đo
+\begin{equation}
+  R=\frac{TP}{TP+FN},\qquad
+  P=\frac{TP}{TP+FP},\qquad
+  \overline{\mathrm{IoU}}=\frac{1}{TP}\sum_{(a,b)\in\text{khớp}}\frac{|a\cap b|}{|a\cup b|},
+\end{equation}
+cùng tỉ lệ số phát hiện, tỉ lệ ảnh trống và độ lệch điểm tin cậy. Mỗi model còn mang một ``thẻ'' ghi cách chuẩn hóa,
+dạng tọa độ và kiểu đầu vào, và hệ thống từ chối nạp model thiếu thẻ.
+
+\begin{table}[ht]
+\centering
+\caption{Parity trên bo mạch (INT8 so với ONNX, ghép khung $\mathrm{IoU}\ge0{,}5$).}
+\label{tab:parity}
+\begin{tabular}{lrrrl}
+\toprule
+Model, tập ảnh & $R$ & $P$ & $\overline{\mathrm{IoU}}$ & Kết luận \\
+\midrule
+\texttt{lab\_v3}, 40 ảnh, \texttt{librknnrt} 2.3.0 & 0,92 & 0,87 & 0,82 & đạt \\
+\texttt{lab\_v3}, cùng ảnh, 2.3.2 & 0,92 & 0,87 & 0,82 & đạt (giống hệt) \\
+\texttt{lab\_v5}, 78 ảnh (hai góc camera) & 0,98 & 0,96 & 0,84 & đạt \\
+\texttt{lab\_v6} (model đang dùng), cùng 78 ảnh & 0,98 & 0,93 & 0,84 & đạt \\
+\texttt{lab\_v6}, đầu ra tách (đang dùng từ 16/10), 99 ảnh & 0,98 & 1,00 & 0,97 & đạt \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Chế độ thích nghi so với chạy hết}
+\label{sec:adaptive}
+
+Gọi $\lambda_s$ là số lần gọi tầng $s$ trên mỗi khung và $\bar t_s$ là thời gian trung bình mỗi lần gọi; công tính toán
+của NPU trên mỗi khung là
+\begin{equation}
+  W=\sum_{s\in\{A,B,C\}}\lambda_s\,\bar t_s .
+\end{equation}
+Ở chế độ \emph{thích nghi} tầng B chỉ chạy cho người đến hạn kiểm tra lại và tầng C ở 1\,Hz; ở chế độ \emph{chạy hết}
+(parallel) cả hai chạy mỗi khung. Chúng tôi đo mỗi chế độ \textbf{3 lượt $\times$ 15 phút} (khởi động 30\,s, hai chế độ xen
+kẽ để dàn đều trôi nhiệt, cùng một video phát đúng 30\,FPS và lặp lại, cài đặt xung mặc định của bo mạch).
+
+\begin{table}[ht]
+\centering
+\caption{Thích nghi so với chạy hết, trung bình 3 lượt $\times$ 15 phút (khoảng min--max trong ngoặc).}
+\label{tab:adapt}
+\begin{tabular}{lrr}
+\toprule
+ & Thích nghi & Chạy hết \\
+\midrule
+Số lần gọi tầng B / C mỗi khung & 0,07 / 0,03 & 3,1 / 1,0 \\
+Công NPU $W$ (ms/khung) & \textbf{32,2} & 74,3 (gấp 2,3 lần) \\
+CPU của tiến trình & \textbf{35\%} & 73\% (gấp 2,1 lần) \\
+Nhiệt độ SoC, 5 phút cuối & \textbf{41,5\,$^\circ$C} (41,4--41,6) & 54,3\,$^\circ$C (53,3--55,0) \\
+FPS & 28,2 (28,0--28,3) & 29,8 (29,8--29,9) \\
+Độ trễ khung p50 / p99 & 26,9 / 45,5\,ms & 25,6 / 36,4\,ms \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[ht]
+\centering
+\begin{tikzpicture}[x=1cm,y=1cm]
+  % khung 1: công NPU, 0..90 ms (0,045 cm/ms)
+  \begin{scope}
+    \draw[line width=0.7pt] (0,0)--(0,4.5);
+    \draw[line width=0.7pt] (0,0)--(5.6,0);
+    \foreach \v in {0,20,40,60,80}{\draw (0,\v*0.045)--(-0.1,\v*0.045) node[left,font=\scriptsize]{\v};}
+    \node[rotate=90,font=\small] at (-1.15,2.25) {Công NPU (ms/khung)};
+    \draw[line width=0.7pt,pattern=north east lines] (0.8,0) rectangle (2.2,32.2*0.045);
+    \draw[line width=0.7pt,fill=black!85] (3.4,0) rectangle (4.8,74.3*0.045);
+    \node[font=\scriptsize,above] at (1.5,32.2*0.045) {32,2};
+    \node[font=\scriptsize,above] at (4.1,74.3*0.045) {74,3};
+    \node[font=\small,below] at (1.5,0) {Thích nghi};
+    \node[font=\small,below] at (4.1,0) {Chạy hết};
+  \end{scope}
+  % khung 2: nhiệt độ, 30..60 °C (0,15 cm/°C)
+  \begin{scope}[xshift=8.3cm]
+    \draw[line width=0.7pt] (0,0)--(0,4.5);
+    \draw[line width=0.7pt] (0,0)--(5.6,0);
+    \foreach \v in {30,40,50,60}{\draw (0,{(\v-30)*0.15})--(-0.1,{(\v-30)*0.15}) node[left,font=\scriptsize]{\v};}
+    \node[rotate=90,font=\small] at (-1.15,2.25) {Nhiệt độ SoC, 5 phút cuối ($^\circ$C)};
+    \draw[line width=0.7pt,pattern=north east lines] (0.8,0) rectangle (2.2,{(41.5-30)*0.15});
+    \draw[line width=0.7pt,fill=black!85] (3.4,0) rectangle (4.8,{(54.3-30)*0.15});
+    \node[font=\scriptsize,above] at (1.5,{(41.5-30)*0.15}) {41,5};
+    \node[font=\scriptsize,above] at (4.1,{(54.3-30)*0.15}) {54,3};
+    \node[font=\small,below] at (1.5,0) {Thích nghi};
+    \node[font=\small,below] at (4.1,0) {Chạy hết};
+  \end{scope}
+\end{tikzpicture}
+\caption{Chế độ thích nghi làm ít việc hơn 2,3 lần và giữ SoC mát hơn 12,8\,$^\circ$C ở trạng thái ổn định (3 lượt
+mỗi chế độ trùng nhau, xem khoảng trong Bảng~\ref{tab:adapt}).}
+\label{fig:adapt}
+\end{figure}
+
+\paragraph{Cái giá của thích nghi và một bài học đo lường.}
+Với cài đặt xung mặc định, chế độ thích nghi lại có FPS thấp hơn một chút (28,2 so với 29,8) và đuôi trễ dài hơn. Chúng
+tôi truy ra nguyên nhân: khi tải nhẹ, bo mạch tự \emph{hạ xung CPU và bộ nhớ DDR} (DDR từ 2112 xuống 528\,MHz), nên mỗi
+lần suy luận tầng A chậm đi (30,5\,ms thay vì 25,8\,ms). Khi khóa xung CPU, DDR và NPU ở mức cao nhất, kết quả đảo
+chiều: thích nghi 42,0\,FPS, trễ p99 24,9\,ms so với chạy hết 40,1\,FPS, 25,9\,ms (đo ngắn 1 phút, nên chỉ dùng để so
+tương đối). Bài học: \emph{so tốc độ giữa hai chế độ có tải khác nhau phải khóa xung}, nếu không ta đo bộ điều xung
+chứ không đo thuật toán. Chênh nhiệt độ 12,8\,$^\circ$C phù hợp với việc chế độ thích nghi tạo tải thấp hơn, nhưng
+chưa tự nó chứng minh mức tiết kiệm điện; điều đó được kiểm bằng đồng hồ ngay dưới đây.
+
+\paragraph{Công suất điện (đo ngày 29/10).}
+Đồng hồ USB-C KWS-1902C đặt giữa bộ sạc và bo mạch; chúng tôi đọc số mWh \emph{cộng dồn} ở đầu và cuối mỗi pha, vì số W hiện
+trên màn hình thấp hơn tích điện áp $\times$ dòng khoảng 10--13\% còn số cộng dồn thì khớp. Trước khi đo, chúng tôi kiểm đồng hồ
+bằng hai phép thử: bo mạch ở tải thường trong 73\,s cho 3,54\,W đúng bằng $V\times A$, và khi cho CPU chạy hết công suất số đo tăng
+từ 3,2 lên 8,3\,W. Mỗi pha chạy một lần: nghỉ 5 phút, cấu hình sản phẩm 10 phút, thích nghi và chạy hết 15 phút, cùng video phát lại.
+Số W giữa chừng đọc trên đồng hồ khớp số cộng dồn trong khoảng 8\% (Bảng~\ref{tab:power}).
+
+\begin{table}[ht]
+\centering
+\caption{Công suất bo mạch (một lần đo mỗi pha, sai số tuyệt đối khoảng $\pm$10\%).}
+\label{tab:power}
+\begin{tabular}{lrrrr}
+\toprule
+Pha & Công suất TB & Trên mức nghỉ & Khung/giây & Năng lượng/khung \\
+\midrule
+Nghỉ (không chạy gì) & 0,86\,W & --- & --- & --- \\
+Cấu hình sản phẩm (tầng A) & 2,20\,W & +1,34\,W & 27,3 & 81\,mJ \\
+Thích nghi & 1,98\,W & +1,12\,W & 28,9 & 69\,mJ \\
+Chạy hết (A+B+C mỗi khung) & 3,34\,W & +2,48\,W & 29,7 & 113\,mJ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Ở cùng tốc độ khung 29\,FPS, chế độ thích nghi dùng ít hơn chạy hết \textbf{1,36\,W (41\%)}, tức năng lượng mỗi khung giảm khoảng 39\%;
+chênh này lớn hơn sai số đồng hồ. Ngược lại, cấu hình sản phẩm (2,20\,W) và thích nghi (1,98\,W) chênh nhau trong sai số, nên chúng tôi
+không kết luận cái nào tốn hơn: sản phẩm còn chạy giao diện web, vẽ khung, ảnh bằng chứng, đèn LED và màn OLED. Các phép đo dùng video
+phát lại nên \emph{không} gồm điện của camera, và mỗi pha chỉ đo một lần. Lúc chạy dịch vụ thật có camera, phép thử đồng hồ ở tải thường đọc 3,54\,W.
+
+% ======================================================================
+\section{Dữ liệu và học với ít nhãn}
+
+\subsection{Bộ dữ liệu}
+
+Chỉ có hai lớp: \texttt{person} và \texttt{lab\_coat}. Chúng tôi bỏ lớp kính và găng sau khi kiểm tra dữ liệu: không ai
+trong phòng đeo kính, và toàn bộ khung ``găng'' của lô đầu là \emph{một đôi găng nằm trên bàn} do cách chọn ảnh của
+chúng tôi thiên lệch. Dữ liệu thu bằng cách để bo mạch tự chụp một ảnh mỗi 4 giây (bỏ khung tĩnh và quá tối), qua
+các buổi ở hai \emph{góc camera khác nhau}; tổng cộng khoảng 1\,700 ảnh được gán nhãn (đa số có 5--6 người mỗi ảnh)
+và 238 ảnh COCO làm mẫu âm tính (mục~\ref{sec:coco}).
+
+\subsection{Vòng gán nhãn hiệu quả}
+
+\begin{figure}[ht]
+\centering
+\begin{tikzpicture}[node distance=7mm and 8mm]
+  \node[boxw] (cap) {Thu ảnh trên bo mạch\\1 ảnh / 4\,s};
+  \node[boxw,right=of cap] (sel) {Chọn ảnh\\khác nhau nhất\\+ ảnh model lưỡng lự};
+  \node[boxw,right=of sel] (dra) {Model gợi ý\\nhãn nháp};
+  \node[boxw,below=10mm of dra] (fix) {Người sửa\\(chỉ xóa nhãn sai)};
+  \node[boxw,left=of fix] (trn) {Huấn luyện\\3 lần (3 seed)};
+  \node[boxw,left=of trn] (tst) {Chấm trên\\\emph{phiên khác}};
+  \draw[arr] (cap)--(sel);
+  \draw[arr] (sel)--(dra);
+  \draw[arr] (dra)--(fix);
+  \draw[arr] (fix)--(trn);
+  \draw[arr] (trn)--(tst);
+  \draw[arr] (tst.north) -- ++(0,4mm) -| (sel.south);
+\end{tikzpicture}
+\caption{Vòng gán nhãn. Điểm mấu chốt: tập kiểm tra luôn lấy từ một phiên (ngày, người) khác tập huấn luyện.}
+\label{fig:loop}
+\end{figure}
+
+\paragraph{Chọn ảnh.} Từ hàng nghìn ảnh gần giống nhau (người ngồi yên), chúng tôi chọn những ảnh \emph{khác nhau nhất}
+bằng lấy mẫu điểm xa nhất trên ảnh thu nhỏ $48{\times}36$: mỗi lần chọn ảnh có khoảng cách nhỏ nhất tới tập đã chọn là
+lớn nhất. Cách này có một sai sót chúng tôi gặp và sửa: nó \emph{ưa} những khung ``lạ nhất'', gồm cả các khung chụp
+trong lúc bo mạch bị bê đi, nên giờ ảnh có dưới 35\% điểm ảnh khớp nền trung bình của phiên bị loại trước khi chọn.
+Một phần ảnh được chọn thêm theo tiêu chí \emph{model đang lưỡng lự về áo}.
+
+\paragraph{Nhãn nháp.} Model hiện có tự khoanh người và áo; người chỉ \emph{xóa nhãn sai} và vẽ bổ sung thay vì gán từ
+đầu. Quy tắc nhãn: chỉ gán \texttt{lab\_coat} khi chắc chắn là áo blouse \emph{đang mặc}; áo trắng khác hay áo cầm trên
+tay thì không gán nhưng vẫn giữ khung người.
+
+\subsection{Kết quả của từng bước}
+
+\begin{table}[ht]
+\centering
+\caption{Từng bước của quy trình dữ liệu và tác dụng đo được.}
+\label{tab:data}
+\begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X r}
+\toprule
+Bước & Kết quả đo & Mục \\
+\midrule
+Model học ảnh PPE công trường, đưa vào lab & bắt người kém model gốc (16/20 so với 20/20 ảnh) & \#25 \\
+Model open-vocabulary làm ``thầy'' gán nhãn & AP50 kính 0,13--0,20, găng 0,41--0,46: không dùng được & \#26 \\
+Thử nhỏ 146 ảnh, test \emph{cùng phiên} & AP50 áo 0,91 nhưng gọi áo thun trắng là áo blouse ở 18/20 ảnh & \#34 \\
+\textbf{Chọn ảnh khó}, lô thứ nhất & độ chính xác áo \textbf{0,52 $\to$ 0,76} & \#35 \\
+Lô khó thứ hai, cùng phiên & không cải thiện đo được (bão hòa) & \#35 \\
+Huấn luyện trên nhãn máy tự đoán, không sửa & không dùng: học lại đúng lỗi của model & --- \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\paragraph{Bài học về đo lường.} Điểm trên tập kiểm tra \emph{cùng phiên} với huấn luyện cao một cách giả tạo: cùng một model
+cho AP50 0,99 trên tập cùng phiên và chỉ 0,45 trên người mà nó chưa thấy. Vì vậy mọi số ở mục~\ref{sec:results} đều lấy
+từ các phiên kiểm tra riêng, và giữa các lần huấn luyện lệch nhau khoảng $\pm4$ điểm chỉ do đổi hạt giống ngẫu nhiên
+nên chúng tôi huấn luyện mỗi cấu hình 3 lần và không kết luận nếu chênh nhỏ hơn mức đó.
+
+\subsection{Sửa lỗi ``áo thun trắng bị gọi là áo blouse'' bằng ảnh COCO}
+\label{sec:coco}
+
+Mọi model chỉ học ảnh phòng lab đều gọi áo thun trắng là áo blouse ở \textbf{19--20 trên 20} ảnh kiểm tra, ở mọi lần
+huấn luyện: lỗi do thiếu dữ liệu chứ không phải may rủi. Phòng lab có quá ít người mặc áo trắng thường, nên chúng tôi
+lấy từ bộ COCO (val2017) những ảnh có người mà thân trên chủ yếu trắng/sáng (HSV: $V\ge170$, $S\le45$ chiếm
+$\ge45\%$ mặt nạ người), bỏ ảnh có vùng đám đông và ảnh có chú thích nhắc nghề mặc áo choàng (bác sĩ, y tá, phòng
+thí nghiệm, đầu bếp\dots). Kết quả: 238 ảnh, 1\,072 người, tất cả gán \texttt{person} và \emph{không} có khung áo; xem
+thủ công 60 mẫu thấy áo thun, sơ mi, đồ tennis, không thấy áo blouse. Chúng chỉ dùng để huấn luyện, không bao giờ để chấm.
+
+Trái với kinh nghiệm xấu khi dùng ảnh công trường làm kém model (bảng~\ref{tab:data}), ở đây ảnh ngoài chỉ thêm
+\emph{mẫu âm tính cho một lớp} và người vẫn được gán \texttt{person}, nên khả năng bắt người không bị ảnh hưởng.
+
+% ======================================================================
+\section{Kết quả trên tập kiểm tra thật}
+\label{sec:results}
+
+Chúng tôi chấm luật ``người không mặc áo blouse trong vùng'' \emph{theo từng người}: lấy nhãn tay làm đáp án, áp dụng
+đúng quy tắc gán áo ở mục~2.3 lên nhãn tay để biết ai thật sự mặc áo, rồi so với cảnh báo của hệ thống. Hai phiên
+kiểm tra riêng: góc camera 1 (150 ảnh, 644 người) và góc camera 2 (149 ảnh, khác ngày, khác góc); coi cả khung hình
+là vùng nguy hiểm để mọi người đều được xét.
+
+\begin{table}[ht]
+\centering
+\caption{Độ chính xác của luật vùng (model FP32, xem mục~\ref{sec:int8} cho bản INT8 triển khai), ngưỡng áo $\tau=0{,}6$, trung bình 3 lần huấn luyện (khoảng min--max).
+``Bắt'': trong số người \emph{không} mặc áo, tỉ lệ bị cảnh báo. ``Báo nhầm'': trong số người \emph{có} mặc áo, tỉ lệ bị cảnh báo.}
+\label{tab:acc}
+\small
+\begin{tabular}{lrrrrr}
+\toprule
+ & \multicolumn{2}{c}{Góc 1} & \multicolumn{3}{c}{Góc 2} \\
+\cmidrule(lr){2-3}\cmidrule(lr){4-6}
+Model (số ảnh, số góc học) & Bắt & Báo nhầm & AP50 người & Bắt & Báo nhầm \\
+\midrule
+\texttt{lab\_v3} (941 ảnh, 1 góc) & 75\% (72--77) & 5\% & 0,94 (0,93--0,95) & 87\% & 9\% \\
+\texttt{lab\_v5} (1\,400 ảnh, 2 góc) & \textbf{78\%} (75--82) & 4\% & \textbf{0,96} (0,96--0,96) & \textbf{90\%} & 10\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Đổi góc camera.} Model \texttt{lab\_v3} \emph{chưa từng thấy} góc 2 vẫn đạt AP50 áo 0,94 ở đó, tức là đổi
+góc vừa phải không làm hỏng model. Thêm ảnh góc 2 làm việc bắt người tốt hơn chắc chắn (+0,02, ba lần huấn luyện không
+chồng nhau) mà không làm kém góc 1; các chênh khác nằm trong dao động $\pm4$ điểm. Hạn chế: tập góc 2 có rất ít người
+không mặc áo (khoảng 80 so với 910 người có áo), nên tỉ lệ ``bắt'' ở đó dao động nhiều. Kết luận ``đổi góc vừa phải không làm hỏng model'' có
+giới hạn: ở mục~\ref{sec:angle}, một góc \emph{khác hẳn} (camera rất gần, nhìn từ trên xuống, cắt mất đầu người) làm model không nhận được áo.
+
+\paragraph{Ngưỡng áo là một đánh đổi.} Với model \texttt{lab\_v3} ở góc 1: $\tau=0{,}4$ bắt 66\% và báo nhầm 2\%;
+$\tau=0{,}6$ bắt 77\%, nhầm 4\%; $\tau=0{,}7$ bắt 82\%, nhầm 5\%; $\tau=0{,}8$ bắt 89\%, nhầm 15\%. Ngưỡng nên chọn theo
+chỗ đặt camera: nơi đa số mặc áo thì tăng ngưỡng làm báo nhầm tăng nhanh (góc 2 nhầm khoảng 10\% ở 0,6 nhưng khoảng 4\%
+ở 0,4). Ngưỡng ở trên được chọn trên chính tập kiểm tra nên hơi lạc quan.
+
+\paragraph{Model lớn hơn không cứu được.} Thử model lớn hơn (YOLO26s): chỉ hơn khoảng 2 điểm ở cùng mức báo
+nhầm, chạy chậm hơn 2--3 lần trên bo mạch. Chúng tôi giữ YOLO26n: nút thắt là dữ liệu, không phải kích thước model.
+
+\begin{table}[ht]
+\centering
+\caption{Lỗi ``áo thun trắng bị gọi là áo blouse'' trước và sau khi thêm 238 ảnh COCO âm tính (20 ảnh kiểm tra, ba lần huấn luyện).}
+\label{tab:coco}
+\begin{tabular}{lcccc}
+\toprule
+Model & lần 1 & lần 2 & lần 3 & Điểm ở lab \\
+\midrule
+\texttt{lab\_v5} (không có ảnh COCO) & 20/20 & 20/20 & 20/20 & --- \\
+\texttt{lab\_v6} (có ảnh COCO) & \textbf{0/20} & \textbf{2/20} & \textbf{4/20} & không đổi trong nhiễu $\pm4$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Bài kiểm tra này chỉ có 20 ảnh của \emph{một} phiên (và một người) nên chỉ kết luận được chiều hướng rõ rệt, chưa đủ
+để trích như một tỉ lệ chung. Cũng cần nói thẳng: sửa lỗi này \emph{không} làm tăng tỉ lệ bắt người không áo ở hai tập
+kiểm tra ở lab, nên các lần bỏ sót ở đó chủ yếu do nguyên nhân khác (người che nhau, khung gộp hai người, áo bị che).
+
+% ======================================================================
+\subsection{Lượng tử hóa INT8 làm tụt chất lượng khung, và cách sửa}
+\label{sec:int8}
+
+Các bảng ở trên chấm bản FP32. Khi chấm lại bản INT8 chạy thật trên NPU bằng cùng một bộ chấm, chúng tôi thấy xuất
+mặc định của Ultralytics làm mAP50--95 tụt khoảng 17--20 điểm (mAP50 chỉ tụt 2--4 điểm). Nguyên nhân: đầu ra là một
+tensor chứa cả tọa độ khung và điểm lớp, dùng chung một thang 8 bit, nên mép khung bị làm tròn khoảng 2,7 điểm ảnh
+(sai lệch cạnh trung bình 5,3 điểm ảnh, IoU với bản FP32 chỉ 0,84). Các biện pháp thông thường (thuật toán hiệu chuẩn KL,
+lượng tử hóa hỗn hợp, đổi số ảnh hiệu chuẩn) không cải thiện. Cách sửa: xuất đầu ra \emph{tách} thành sáu tensor (khung
+và điểm lớp của từng tầng đặc trưng, mỗi tensor một thang riêng) và giải mã trên CPU; chi phí giải mã không đáng kể.
+
+\begin{table}[ht]
+\centering
+\caption{INT8 trên NPU, trung bình 3 lần huấn luyện (độ lệch chuẩn). Ảnh vào cỡ đã huấn luyện.}
+\label{tab:int8}
+\small
+\begin{tabular}{lrrrr}
+\toprule
+ & \multicolumn{2}{c}{Góc 1} & \multicolumn{2}{c}{Góc 2} \\
+Cấu hình & mAP50 & mAP50--95 & mAP50 & mAP50--95 \\
+\midrule
+FP32 (seed 0) & 0,864 & 0,661 & 0,976 & 0,791 \\
+INT8 một tensor, 640 (seed 0) & 0,828 & 0,481 & 0,950 & 0,590 \\
+\textbf{INT8 đầu ra tách, 640} & 0,869 (0,008) & 0,657 (0,004) & 0,973 (0,001) & 0,784 (0,004) \\
+INT8 đầu ra tách, 512 & 0,873 (0,005) & 0,655 (0,007) & 0,971 (0,001) & 0,770 (0,005) \\
+INT8 đầu ra tách, 416 & 0,846 (0,011) & 0,620 (0,014) & 0,967 (0,002) & 0,762 (0,001) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Bản đầu ra tách giữ gần hết chất lượng FP32 (mAP50--95 chỉ mất tối đa khoảng 1 điểm), parity với ONNX có IoU khớp
+0,967 (trước đó 0,84). Chấm luật vùng với INT8 thật (ngưỡng áo 0,6, 3 lần huấn luyện): góc 1 bắt 81\%, 75\%, 86\% người
+không áo với báo nhầm 8\%, 7\%, 9\%; góc 2 bắt 86\%, 90\%, 89\% với báo nhầm 10--11\%; áo thun trắng bị gọi là áo blouse
+1--3/20. Các số này nằm trong mức nhiễu của bản FP32. Độ phân giải 416 kém rõ rệt; 512 ngang 640 về mAP50 nhưng kém khoảng 1,4 điểm mAP50--95 ở góc 2 và recall người xa kém 1,3 điểm
+(0,795 xuống 0,782; 3 lần huấn luyện). Hệ thống triển khai dùng 640.
+
+\paragraph{Độ trễ và vai trò của xung DDR.} Độ trễ của một lời gọi đầy đủ (tiền xử lý, NPU, giải mã) đo ba vòng đan xen cho từng cấu hình, lúc dịch vụ
+chính tắt để không tranh NPU. Với xung mặc định, DDR nằm ở 1068\,MHz và thỉnh thoảng tụt xuống 528\,MHz trong khi NPU (1000\,MHz) và CPU (2,35\,GHz) đã ở
+mức cao nhất; khi khóa cả bốn bộ điều tốc về \texttt{performance} thì đuôi độ trễ gần như phẳng (Bảng~\ref{tab:lat}). Do đó nguyên nhân dao động độ trễ là xung DDR,
+không phải NPU hay nhiệt độ, và 512 nhanh hơn 640 khoảng 6,9\,ms (30\%) trong cả hai trường hợp. Camera chỉ cho 30 khung/giây nên 512 không tăng FPS,
+lợi ích chỉ là tải NPU, nhiệt và độ trễ đuôi; chúng tôi giữ 640 làm mặc định.
+
+\begin{table}[ht]
+\centering
+\caption{Độ trễ một lời gọi (ms), trung bình ba vòng đan xen; ``khóa'' = CPU, DDR, NPU, GPU ở \texttt{performance}.}
+\label{tab:lat}
+\small
+\begin{tabular}{lrrrr}
+\toprule
+Cấu hình & p50 & p95 & p99 & DDR (MHz) \\
+\midrule
+640, mặc định & 26,0 & 38--45 & 46--47 & 1068 \\
+640, khóa xung & 23,4 & 24,3--24,6 & 25 & 2112 \\
+512, mặc định & 20,1 & 28--34 & 36--42 & 1068 (một vòng 528) \\
+512, khóa xung & 16,5 & 16,8--17,0 & 17 & 2112 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Ảnh hiệu chuẩn.} Bốn bộ ảnh hiệu chuẩn (toàn bộ 1\,400 ảnh lab; 300 ảnh chọn đều; 100 ảnh ngẫu nhiên; 300 ảnh cộng 100 ảnh COCO áo trắng) cho mAP khác nhau
+không quá 0,7 điểm, cùng qua cổng parity, và luật vùng bắt 79--81\% người không áo với báo nhầm 7--8\% ở góc 1. Do đó cỡ và thành phần bộ hiệu chuẩn không quyết
+định độ chính xác INT8 (chỉ một model, một lần build mỗi bộ, nên không phân biệt được chênh dưới 1 điểm). Ảnh COCO chỉ dùng để huấn luyện và hiệu chuẩn, không nằm trong tập kiểm tra.
+
+% ======================================================================
+\subsection{Đổi sang góc camera mới tại lab}
+\label{sec:angle}
+
+Khi đặt camera tại phòng thí nghiệm để quay demo, trang web gán nhãn ``Không áo lab'' cho một người đang mặc áo blouse trắng rõ ràng. Số đo của
+bo mạch cho thấy điểm áo của người đó là \emph{không có} (không phải điểm thấp bị lọc). Chúng tôi lấy 122 khung liên tiếp (khoảng 8 giây, một người mặc
+áo đứng giữa khung, những người khác xung quanh) từ luồng camera thật và chạy lại các model ở ngưỡng phát hiện rất thấp (0,1) để biết model có thấy áo ở \emph{bất kỳ}
+mức tin cậy nào không.
+
+\begin{table}[ht]
+\centering
+\caption{Camera ở góc mới (cao, gần, cắt mất đầu người). Số khung (trong số khung có người mặc áo) mà người đó được gán một khung áo đạt ngưỡng,
+và số khung người \emph{khác} (``khác'', không mặc áo) bị gán áo ở cùng ngưỡng. Model FP32, một người mặc áo, một phiên 8 giây: chỉ dùng để so sánh tương đối.}
+\label{tab:angle}
+\small
+\begin{tabular}{lrrrr}
+\toprule
+Model & áo $\ge0{,}6$ & áo $\ge0{,}3$ & khác $\ge0{,}6$ & khác $\ge0{,}3$ \\
+\midrule
+\texttt{lab\_v6} (đang dùng) & \textbf{0/122} (0\%) & 0/122 (0\%) & 0/160 & 0/160 \\
+\texttt{lab\_v5} & 24/122 (20\%) & 73/122 (60\%) & 0/336 & 3/336 \\
+\texttt{lab\_v3} & 20/121 (17\%) & 61/121 (50\%) & 0/412 & 15/412 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Model đang dùng (\texttt{lab\_v6}) không có khung áo nào ở bất kỳ ngưỡng nào, cả bản ONNX chuẩn lẫn bản INT8 trên NPU. Hạ ngưỡng áo do đó không cứu được:
+không có khung nào để gán. Hai model cũ hơn nhận được áo ở một phần số khung, nhưng cũng chỉ 17--60\%. So sánh ảnh cho thấy nguyên nhân khả dĩ nhất:
+dữ liệu huấn luyện quay người ở xa, thấy trọn thân và áo trắng sáng trên nền tủ gỗ; góc mới đặt camera rất gần, cắt mất đầu và nhìn từ trên xuống nền xám.
+Chúng tôi \emph{chưa} tách riêng từng yếu tố (độ cao, khoảng cách, ánh sáng, nền). Còn một giả thuyết chưa kiểm: model \texttt{lab\_v6} được thêm ảnh áo trắng không phải áo
+blouse làm mẫu âm tính nên có thể ``cứng'' hơn \texttt{lab\_v5} ở góc lạ.
+
+Sau khi đặt camera về khung hình giống dữ liệu huấn luyện (người đứng xa hơn, thấy trọn thân), chúng tôi đo lại trên bo mạch thật bằng model và cấu hình sản phẩm
+($\tau=0{,}6$), thăm dò trạng thái mỗi 0,4\,s trong 25 giây với sáu người trong khung:
+
+\begin{itemize}
+  \item Bốn người mặc áo blouse: có khung áo đạt ngưỡng ở 92/94 lần thăm dò (98\%; điểm 0,56--0,94) và được tính ``đang mặc áo'' 98--100\% số lần.
+  \item Ba người không mặc áo: điểm áo cao nhất 0,55, không lần nào đạt 0,6 (0/38). Hai người mặc áo thun hoặc polo trắng: không có khung áo nào.
+  \item Điểm yếu còn lại: người đứng \emph{sát} người mặc áo ``mượn'' áo của họ trong tối đa 2\,s (hai người không áo được tính ``đang mặc áo'' lần lượt 48\% và
+        32\% số lần thăm dò), nên một người không áo đứng sát có thể chưa bị cảnh báo kịp.
+\end{itemize}
+
+Đây là một phiên 25 giây với sáu người, các lần thăm dò cách nhau 0,4\,s nên không độc lập; nó đủ để kết luận lỗi nằm ở \emph{góc camera} chứ không phải ở ngưỡng hay phần cứng,
+nhưng không phải độ chính xác. Bài học vận hành: \emph{góc camera là một phần của dữ liệu huấn luyện}. Phải cố định vị trí đặt camera, kiểm lại bằng một người mặc áo
+đứng một mình trước khi dùng, và nếu bắt buộc dùng góc khác thì phải quay thêm dữ liệu tại đúng vị trí đó rồi huấn luyện lại.
+
+% ======================================================================
+\section{Chạy liên tục}
+
+\subsection{Tốc độ toàn hệ thống và xung bộ nhớ}
+
+Đo cả hệ thống (chế độ thích nghi, model INT8 đầu ra tách 640, tầng B/C bất đồng bộ) trên video phát lại 30 khung/giây, ba vòng đan xen mỗi vòng 240 giây, chỉ đổi
+bộ điều tốc của DDR (Bảng~\ref{tab:ddr}). Ở xung mặc định hệ thống không theo kịp camera (26,8 khung/giây, rớt khoảng 11\% khung); khóa DDR ở mức cao nhất đưa
+nó lên 29,0 khung/giây, p99 độ trễ vòng lặp giảm 2,7\,ms và độ trễ lớn nhất giảm 13\,ms, đổi lại nhiệt độ cuối tăng 3,1\,$^\circ$C (sau 4 phút, chưa bão hòa).
+Chúng tôi chưa đo riêng chi phí điện của việc khóa DDR (công suất tổng của hệ thống nằm ở mục~\ref{sec:adaptive}); dịch vụ triển khai khóa DDR khi bật và trả về mặc định khi dừng.
+
+\begin{table}[ht]
+\centering
+\caption{Toàn hệ thống, chỉ đổi governor của DDR (trung bình ba vòng, khoảng min--max).}
+\label{tab:ddr}
+\small
+\begin{tabular}{lrrrrr}
+\toprule
+DDR & FPS & p50 (ms) & p99 (ms) & max (ms) & nhiệt cuối ($^\circ$C) \\
+\midrule
+mặc định (1068\,MHz) & 26,84 (26,81--26,86) & 37,2 & 44,1 & 62,4 & 41,6 \\
+khóa (2112\,MHz) & 29,02 (29,02--29,03) & 34,1 & 41,4 & 49,5 & 44,7 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Ở chế độ dịch vụ thật (có trang web và camera), việc vẽ khung hình và nén JPEG cho trang web ở mọi khung tốn thêm vài mili giây trong vòng lặp một luồng.
+Giới hạn tần suất vẽ ở 15 lần/giây (trạng thái và cảnh báo vẫn cập nhật mọi khung) làm FPS tăng từ 24,0 lên 25,9 và CPU của tiến trình giảm từ 62,8\% xuống 56,4\%
+(ba vòng mỗi bên, không chồng nhau). Vẫn còn khoảng 3 khung/giây so với bản không có trang web; chưa xác định nguyên nhân.
+
+\subsection{Bộ nhớ và tự phục hồi}
+
+Ở một cấu hình cũ (model một tensor, tầng B bật), RAM tăng khoảng 1,15\,MB/phút ở nửa sau của buổi chạy 30 phút; ban đầu 6--13\,MB/phút, và chúng tôi chưa tìm
+ra nguồn của phần còn lại trong vùng nhớ \texttt{heap} của thư viện gốc. Với cấu hình triển khai hiện tại, một bộ ghi RAM chạy riêng, ngoài tiến trình suy luận (mỗi phút
+đọc \texttt{VmRSS}, \texttt{VmHWM}; mỗi 15 phút đọc PSS và Private\_Dirty từ \texttt{smaps\_rollup}), ghi được một lần chạy liên tục 24 giờ (và 10 giờ ở lần trước). Trong giờ đầu sau khi khởi động RSS tăng
+nhanh (khoảng 70--130\,MB), rồi đi ngang quanh 205--215\,MB: độ dốc sau giờ đầu là 0,024\,MB/phút trong 23 giờ, và mức cao nhất là 269\,MB
+(18\% giới hạn 1,5\,GB của dịch vụ). Do đó con số 1,1\,MB/phút trước đây là độ dốc của giờ khởi động, không phải độ dốc lâu dài, và không có rò rỉ đáng kể
+trong khoảng thời gian đã đo (24 giờ, một cấu hình; chưa đo nhiều ngày). Trong lần đo 10 giờ, lần khởi động lại có kiểm soát sau 6 giờ cần ba lần khởi động trong 30 giây
+(hai lần đầu thất bại, chưa rõ nguyên nhân vì nhật ký hệ thống không được giữ lại); sau khi cho dịch vụ ghi nhật ký riêng và thử mở lại camera, lần khởi động lại sau 24 giờ chỉ cần một lần
+và để lại nhật ký đầy đủ, khoảng 9 giây không giám sát.
+
+Để hệ thống tự phục hồi, ứng dụng chạy như một dịch vụ \texttt{systemd} với \texttt{Restart=on-failure}, giới hạn bộ nhớ 1,5\,GB và khởi động lại có kiểm soát sau mỗi 24 giờ
+(chúng tôi kiểm chứng riêng rằng một dịch vụ thử nghiệm hết thời gian chạy thì thật sự được khởi động lại). Nếu camera ngừng giao khung quá 3 giây, luồng bắt hình mở lại
+thiết bị và hệ thống ngừng phân tích khung cũ thay vì tiếp tục báo kết quả của khung cuối (kiểm tra bằng thiết bị giả; chưa thử rút cáp thật).
+
+\subsection{Đánh giá ban đầu theo sự kiện}
+
+Ngoài chấm từng ảnh, chúng tôi quay 5 cảnh liên tục ở 30 khung/giây, tổng 8 phút, có mốc thời gian làm đáp án. Tập nhỏ
+này chứa 7 lần một người không mặc áo ở trong vùng ít nhất 4 giây. Cấu hình live bắt được 7/7 sự kiện, không báo lặp,
+và có độ trễ trung vị khoảng 5,24 giây từ mốc vi phạm. Sau khi xem lại từng ảnh tại thời điểm cảnh báo, ba cảnh bị tính
+là báo giả gồm một lỗi thật do model mất khung áo trong chốc lát và hai ca người thực sự ở trong đa giác nhưng kịch bản
+quay ghi khác. Hai báo giả khác do người chỉ lộ đầu ở mép dưới ảnh đã được loại bằng quy tắc không xét vùng cho khung
+bị cắt cụt quá nhiều.
+
+Kết quả này chỉ kiểm tra được đường đi end-to-end và giúp tìm lỗi hình học. Vì chỉ có 7 sự kiện, một người và được quay
+ở nhà, không được diễn giải 7/7 thành độ chính xác 100\% hay ngoại suy thành số báo giả mỗi giờ trong lab.
+
+% ======================================================================
+\section{Hạn chế và những gì chưa đo}
+\label{sec:limits}
+
+Chúng tôi liệt kê những điều \emph{chưa} làm để người đọc không hiểu nhầm.
+
+\begin{itemize}
+  \item \textbf{Năng lượng (watt).} Đã đo bằng đồng hồ USB-C (mục~\ref{sec:adaptive}), nhưng mỗi pha chỉ một lần, sai số tuyệt đối
+        khoảng 10\%, và dùng video phát lại nên không gồm điện của camera. Hai lần thử đầu (tháng 10) hỏng: người đo gõ số muộn,
+        và bo mạch tự khởi động lại giữa chừng; lần thứ ba, pha nghỉ bị gõ nhầm số W vào ô mWh nên phải đo lại. Chưa đo lặp nhiều cặp
+        thích nghi/chạy hết, chưa đo khi có camera thật chạy nhiều giờ.
+  \item \textbf{Luật vùng trên video liên tục.} Phép đo ban đầu chỉ có 7 sự kiện, 8 phút, một người và quay ở nhà.
+        Cần lặp với nhiều người, nhiều phiên và trong lab trước khi công bố một tỷ lệ tổng quát.
+  \item \textbf{Té ngã.} Chức năng có trong mã (dựa trên khung người) nhưng chưa thử trên video có người té thật,
+        nên không có số liệu độ chính xác; đã tắt trong cấu hình sản phẩm.
+  \item \textbf{Lửa/khói.} Model có (mAP50 0,72 trên bộ công khai đã làm sạch vì ảnh trùng giữa các tập) nhưng chưa thử
+        trong phòng thí nghiệm; chưa biết tỉ lệ báo nhầm khi chạy cả ngày. Đã tắt trong cấu hình sản phẩm.
+  \item \textbf{Độ nhạy với góc camera.} Mục~\ref{sec:angle}: ở một góc rất khác dữ liệu huấn luyện, model đang dùng không nhận được áo. Chúng tôi chưa biết
+        biên giới giữa ``đổi góc vừa phải'' (chịu được) và ``đổi góc mạnh'' (hỏng), và chưa có model huấn luyện bằng ảnh quay ở góc mới.
+  \item \textbf{Video demo tại lab.} Video đã quay ở vị trí camera cuối nhưng chưa được chấm theo sự kiện có đáp án; không có số liệu độ chính xác tại lab ngoài
+        phép đo 25 giây ở mục~\ref{sec:angle}.
+  \item \textbf{Tin Zalo.} Cần Internet và chỉ gửi chữ. Độ trễ từ lúc trang báo đỏ đến lúc điện thoại nhận tin chưa đo.
+  \item \textbf{Quy mô dữ liệu.} Khoảng 1\,700 ảnh từ hai góc và ba buổi; tập kiểm tra góc 2 có ít người không áo; hai
+        góc camera, một phòng. Kết luận về ``chịu được đổi góc'' chỉ áp dụng cho đổi góc vừa phải như đã thử. Ngưỡng
+        áo đã được khảo sát trên chính tập test nên các số luật vùng hơi lạc quan; lần tiếp theo cần validation set riêng.
+  \item \textbf{Tầng B (kính, găng)} dùng model huấn luyện trên ảnh công trường, chưa có dữ liệu lab và không thuộc sản
+        phẩm; trong đề tài nó chỉ đóng vai trò khối lượng công việc theo từng người để đo lợi ích của chế độ thích nghi.
+  \item \textbf{Ánh sáng yếu, điện và nhiệt.} Tập kiểm tra có độ sáng 100--153 nên chưa đo điều kiện thiếu sáng hay ngược sáng. Chưa đo chi phí điện và nhiệt riêng của việc giữ DDR ở 2112\,MHz liên tục.
+  \item \textbf{Bộ nhớ.} Phép đo RAM dài nhất là 24 giờ liên tục với một cấu hình; chưa đo nhiều ngày, và nguyên nhân phần tăng trong giờ khởi động chưa rõ.
+\end{itemize}
+
+% ======================================================================
+\section{Kết luận}
+
+Một model nhỏ (YOLO26n) lượng tử hóa INT8 chạy trên NPU của Orange Pi 5 giúp tầng phát hiện chính theo kịp camera
+30 khung/giây; khi có dashboard, hệ thống đạt 25,9 khung/giây và vẫn giữ SoC mát,
+trong khi bản CPU không giữ được nhiệt. Phần đóng góp chúng tôi cho là có giá trị nhất không nằm ở một con số tốc độ,
+mà ở ba kết quả có thể kiểm chứng: (1) một cổng parity đã bắt được bốn lỗi chuyển đổi NPU mà các chỉ số tốc độ không
+thấy; (2) chế độ thích nghi giảm công NPU 2,3 lần và hạ 12,8\,$^\circ$C ở trạng thái ổn định, kèm một phân tích vì sao
+cài đặt xung mặc định làm nó \emph{trông} chậm hơn; (3) một quy trình dữ liệu ít nhãn, với tập kiểm tra tách theo phiên,
+trong đó việc \emph{chọn đúng ảnh khó} (độ chính xác áo 0,52 $\to$ 0,76) và việc thêm đúng loại mẫu âm tính (lỗi áo
+thun trắng 20/20 $\to$ 0--4/20) có tác dụng lớn hơn việc dùng model lớn hơn. Các giới hạn ở mục~\ref{sec:limits}, nhất là
+đo công suất lặp với camera thật và các tác vụ té ngã, lửa/khói, vẫn là việc cần làm tiếp. Kết quả đáng chú ý nhất khi đưa hệ thống ra phòng thật là độ nhạy với góc camera
+(mục~\ref{sec:angle}): một model đạt điểm tốt trên tập kiểm tra tách theo phiên vẫn có thể mất hoàn toàn khả năng nhận áo khi camera đổi sang góc khác hẳn. Chúng tôi
+phát hiện điều này nhờ có số đo theo từng người (điểm áo hiển thị ngay trên giao diện) và xử lý bằng cách đặt lại camera và ghi rõ giới hạn, chứ không bằng cách hạ ngưỡng
+để che lỗi.
+
+\vspace{1em}
+\noindent\textbf{Mã nguồn và dữ liệu đo.} Kho mã: \texttt{github.com/Letuthienan1112006/lab-safety-edge-ai}
+(riêng tư). Số liệu và cách đo: \file{docs/results.md}, \file{KNOWN\_ISSUES.md} (52 mục; mỗi bảng ở trên ghi mục
+tương ứng), \file{scripts/eval\_zone\_rule.py} (chấm điểm), \file{scripts/validate\_conversion.py} (cổng parity).
+
+\end{document}

@@ -1,0 +1,359 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Lab Safety Edge AI — kiến trúc trên Orange Pi 5 (RK3588S)",
+    "output": "01-architecture.html",
+    "quality_profile": "showcase",
+    "viewBox": [
+      1380,
+      560
+    ],
+    "views": [
+      {
+        "id": "hot-path",
+        "label": "Đường nóng mỗi frame",
+        "focus": [
+          "camera",
+          "router",
+          "stage_a",
+          "geometry",
+          "decision",
+          "alerts"
+        ],
+        "note": "Chỉ Stage A và hình học chạy trên mọi frame; đây là thứ quyết định FPS."
+      },
+      {
+        "id": "gated",
+        "label": "Nhánh bị gating",
+        "focus": [
+          "router",
+          "stage_b",
+          "stage_c"
+        ],
+        "note": "Stage B chỉ chạy khi có người; Stage C theo nhịp riêng 1 Hz."
+      },
+      {
+        "id": "engines",
+        "label": "Ánh xạ tác vụ → engine",
+        "focus": [
+          "npu",
+          "cpu_big",
+          "cpu_little"
+        ],
+        "note": "engine_map.py phân giải mỗi stage sang một engine và ghi vào metadata của run."
+      }
+    ]
+  },
+  "components": [
+    {
+      "id": "camera",
+      "type": "external",
+      "label": "Logitech C270",
+      "sublabel": "USB MJPG 640×480",
+      "tag": "io/camera.py",
+      "pos": [
+        40,
+        190
+      ],
+      "size": [
+        175,
+        60
+      ]
+    },
+    {
+      "id": "router",
+      "type": "backend",
+      "label": "AdaptiveRouter",
+      "sublabel": "gating + cadence",
+      "tag": "pipeline/router.py",
+      "pos": [
+        270,
+        30
+      ],
+      "size": [
+        175,
+        390
+      ]
+    },
+    {
+      "id": "stage_a",
+      "type": "backend",
+      "label": "Stage A — person",
+      "sublabel": "mọi frame",
+      "tag": "models/backends.py",
+      "pos": [
+        600,
+        30
+      ],
+      "size": [
+        185,
+        60
+      ]
+    },
+    {
+      "id": "stage_b",
+      "type": "backend",
+      "label": "Stage B — PPE",
+      "sublabel": "≤1 lần / 2s / track",
+      "tag": "pipeline/ppe.py",
+      "pos": [
+        600,
+        140
+      ],
+      "size": [
+        185,
+        60
+      ]
+    },
+    {
+      "id": "stage_c",
+      "type": "backend",
+      "label": "Stage C — fire/smoke",
+      "sublabel": "nhịp 1 Hz",
+      "tag": "models/backends.py",
+      "pos": [
+        600,
+        250
+      ],
+      "size": [
+        185,
+        60
+      ]
+    },
+    {
+      "id": "geometry",
+      "type": "backend",
+      "label": "Tracker · Fall · Zones",
+      "sublabel": "hình học, không model",
+      "tag": "pipeline/*.py",
+      "pos": [
+        600,
+        360
+      ],
+      "size": [
+        185,
+        60
+      ]
+    },
+    {
+      "id": "decision",
+      "type": "security",
+      "label": "Debounce + cooldown",
+      "sublabel": "sự kiện phải dai dẳng",
+      "tag": "pipeline/decision.py",
+      "pos": [
+        890,
+        140
+      ],
+      "size": [
+        175,
+        60
+      ]
+    },
+    {
+      "id": "alerts",
+      "type": "external",
+      "label": "Buzzer + RGB LED",
+      "sublabel": "libgpiod · off-thread",
+      "tag": "io/alerts.py",
+      "pos": [
+        1155,
+        30
+      ],
+      "size": [
+        175,
+        60
+      ]
+    },
+    {
+      "id": "dashboard",
+      "type": "frontend",
+      "label": "Dashboard",
+      "sublabel": "MJPEG + JSON :8000",
+      "tag": "io/dashboard.py",
+      "pos": [
+        1155,
+        175
+      ],
+      "size": [
+        175,
+        60
+      ]
+    },
+    {
+      "id": "npu",
+      "type": "cloud",
+      "label": "RKNPU2",
+      "sublabel": "6 TOPS · 3 nhân",
+      "pos": [
+        600,
+        470
+      ],
+      "size": [
+        185,
+        60
+      ]
+    },
+    {
+      "id": "cpu_big",
+      "type": "cloud",
+      "label": "CPU big",
+      "sublabel": "4× Cortex-A76",
+      "pos": [
+        820,
+        470
+      ],
+      "size": [
+        185,
+        60
+      ]
+    },
+    {
+      "id": "cpu_little",
+      "type": "cloud",
+      "label": "CPU LITTLE",
+      "sublabel": "4× Cortex-A55",
+      "pos": [
+        1040,
+        470
+      ],
+      "size": [
+        185,
+        60
+      ]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "Orange Pi 5 · RK3588S — suy luận hoàn toàn trên thiết bị biên, không cloud",
+      "wraps": [
+        "router",
+        "stage_a",
+        "stage_b",
+        "stage_c",
+        "geometry",
+        "decision",
+        "dashboard",
+        "npu",
+        "cpu_big",
+        "cpu_little"
+      ]
+    },
+    {
+      "kind": "security-group",
+      "label": "Compute engines — optimize/engine_map.py phân giải stage → engine, ghi vào metadata của run",
+      "wraps": [
+        "npu",
+        "cpu_big",
+        "cpu_little"
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "grab",
+      "from": "camera",
+      "to": "router",
+      "label": "frame",
+      "variant": "emphasis"
+    },
+    {
+      "id": "always",
+      "from": "router",
+      "to": "stage_a",
+      "label": "mọi frame",
+      "variant": "emphasis"
+    },
+    {
+      "id": "gate-b",
+      "from": "router",
+      "to": "stage_b",
+      "label": "khi có người",
+      "labelSegment": 2,
+      "labelDy": -14
+    },
+    {
+      "id": "cadence-c",
+      "from": "router",
+      "to": "stage_c",
+      "label": "1 Hz",
+      "variant": "dashed",
+      "labelSegment": 2,
+      "labelDy": -14
+    },
+    {
+      "id": "free",
+      "from": "router",
+      "to": "geometry",
+      "label": "bbox + track"
+    },
+    {
+      "id": "ev-b",
+      "from": "stage_b",
+      "to": "decision",
+      "label": "SafetyEvent"
+    },
+    {
+      "id": "ev-geo",
+      "from": "geometry",
+      "to": "decision",
+      "label": "fall · zone",
+      "labelSegment": 1,
+      "labelDy": 20
+    },
+    {
+      "id": "ev-c",
+      "from": "stage_c",
+      "to": "decision",
+      "variant": "dashed"
+    },
+    {
+      "id": "fire",
+      "from": "decision",
+      "to": "alerts",
+      "label": "sau debounce",
+      "variant": "emphasis"
+    },
+    {
+      "id": "stream",
+      "from": "decision",
+      "to": "dashboard",
+      "label": "trạng thái"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Vì sao phân tầng",
+      "items": [
+        "Một YOLO đa lớp cho 4 tác vụ gộp dữ liệu khác domain → mất cân bằng lớp",
+        "Cadence khác nhau giữa các tầng chính là nguồn tiết kiệm tính toán"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Chỉ Stage A vô điều kiện",
+      "items": [
+        "Stage B gated theo người + recheck 2s; Stage C theo đồng hồ, không theo frame",
+        "Fall/Zone ăn ké output Stage A — gần như miễn phí"
+      ]
+    },
+    {
+      "dot": "violet",
+      "title": "Bốn engine, một bài toán lập lịch",
+      "items": [
+        "NPU mạnh nhất nhưng mỗi lần gọi tốn chi phí khởi động",
+        "Tác vụ thưa như Stage B có thể thắng trên CPU-big thay vì NPU"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Chế độ đối chứng",
+      "items": [
+        "mode=parallel: mọi stage mọi frame, bỏ cả recheck — cùng code path, khác một flag"
+      ]
+    }
+  ]
+}

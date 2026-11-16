@@ -1,0 +1,33 @@
+# Lab room zones (camera position of boot014, 2026-10-06). NORMALISED coordinates (0..1).
+# requires: [lab_coat] -> entering in a lab coat is allowed; without one it is a `zone_ppe_violation`.
+# Without `requires` a zone forbids everyone (`zone_intrusion`).
+# A person counts as inside when the bottom-centre of their box (their feet) is inside the polygon,
+# so these polygons are drawn on the FLOOR in front of the furniture, not on the furniture itself.
+# Redraw after moving the camera. This 21-point outline is the dashboard drawing from 20/10, repaired on 21/10:
+# ordered as one simple polygon and closed on y=1.0 so bottom-clipped people remain inside.
+zones:
+  - name: san_phong        # the white tiled floor only, not the bag area by the cabinet (user, 09/10): anyone on it must wear a lab coat
+    severity: high
+    requires: [lab_coat]
+    polygon:
+      - [0.0467, 1.0]
+      - [0.0112, 0.8272]
+      - [0.0101, 0.7692]
+      - [0.0101, 0.6808]
+      - [0.0067, 0.6183]
+      - [0.0067, 0.5528]
+      - [0.0112, 0.4826]
+      - [0.1050, 0.4720]
+      - [0.1793, 0.4613]
+      - [0.2262, 0.4567]
+      - [0.2559, 0.4537]
+      - [0.3508, 0.5147]
+      - [0.4114, 0.5894]
+      - [0.4777, 0.6595]
+      - [0.6035, 0.7327]
+      - [0.6709, 0.7906]
+      - [0.7670, 0.8592]
+      - [0.8241, 0.9034]
+      - [0.9042, 0.9476]
+      - [0.9407, 0.9552]
+      - [0.9156, 1.0]

@@ -1,0 +1,11 @@
+# Full A+B+C system with the LAB stage A (lab_v5: person + lab_coat) for the adaptive-vs-parallel compute benchmark
+# (configs/exp/L3_*). Stage B (goggles/gloves on person crops, construction-site model, #25/#28) is NOT part of the lab
+# product -- it is kept here as the per-person "attribute check" workload whose cost gating is meant to save.
+# required: [] -> it runs and costs NPU time, but flags nobody (nobody wears goggles in this lab, #33).
+stage_a:
+  names: [person, lab_coat]
+stage_b:
+  names: [goggles, gloves]
+  required: []
+stage_c:
+  names: [fire, smoke]

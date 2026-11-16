@@ -1,0 +1,63 @@
+# N3a: resolution sweep point, RKNN FP16 @ imgsz 320 (640 is N1).
+# REQUIRES ITS OWN EXPORT at imgsz 320. RKNN fixes the input shape at
+# convert time, so this point of the sweep cannot reuse N1's 640 model:
+#   python3 scripts/export_rknn.py <yolo26n.pt> --imgsz 320 \
+#       --precision fp16 --target rk3588
+# Dashboard and GPIO are off on purpose.
+source:
+  device: 0
+  width: 640
+  height: 480
+  fps: 30
+stage_a:
+  backend: rknn
+  weights: runs/export/yolo26n_fp16_320.rknn
+  imgsz: 320
+  conf: 0.4
+  iou: 0.5
+  engine: npu
+  core_mask: auto
+stage_b:
+  enabled: true
+  backend: stub
+  weights: null
+  imgsz: 192
+  conf: 0.45
+  sim_latency_ms: 30
+  recheck_interval_s: 2.0
+  crop_padding: 0.12
+  engine: cpu_any
+stage_c:
+  enabled: true
+  backend: stub
+  weights: null
+  imgsz: 224
+  conf: 0.6
+  sim_latency_ms: 40
+  interval_s: 1.0
+  engine: cpu_any
+fall:
+  enabled: true
+  aspect_ratio_threshold: 1.15
+  center_drop_ratio: 0.18
+  drop_window_s: 1.0
+  still_duration_s: 2.5
+  still_iou_threshold: 0.7
+zones:
+  enabled: true
+  file: configs/zones.yaml
+tracker:
+  max_age_s: 1.5
+  iou_match_threshold: 0.3
+alerts:
+  debounce_s: 3.0
+  cooldown_s: 10.0
+  buzzer_pin: 17
+  led_r_pin: 27
+  led_g_pin: 22
+  gpio: 'off'
+dashboard:
+  enabled: false
+  host: 0.0.0.0
+  port: 8000
+  jpeg_quality: 70

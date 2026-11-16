@@ -1,0 +1,59 @@
+# Live (board): web dashboard, lab model lab_v6 INT8 on NPU core 0, fire/smoke INT8 on core 2 (async), whole-floor
+# zone requiring a lab coat. Started by `make dashboard` from the laptop (scripts/dashboard.sh), reached through an
+# SSH tunnel at http://localhost:8000 -- bound to 127.0.0.1 on the board on purpose (the page shows people).
+# PARITY: lab_v6_split_int8_640.rknn must pass scripts/validate_conversion.py on the board before its numbers count.
+affinity: {cpus: big}
+source: {device: 0, width: 640, height: 480, fps: 30}
+stage_a:
+  backend: rknn
+  weights: runs/export/lab_v6_split_int8_640.rknn
+  imgsz: 640
+  conf: 0.4
+  iou: 0.5
+  keep_classes: [person, lab_coat]
+  engine: npu
+  core_mask: '0'
+stage_b: {enabled: false}
+# fire/smoke (stage C) and fall detection are switched OFF in the product (21/10, owner's decision: lab-coat rule only)
+stage_c:
+  enabled: false
+  backend: rknn
+  weights: runs/export/stageC_fire_y26n_best_int8_416.rknn
+  imgsz: 416
+  conf: 0.5
+  iou: 0.5
+  engine: npu
+  core_mask: '2'
+  interval_s: 1.0
+zones:
+  enabled: true
+  file: configs/zones_lab.yaml
+  attire_min_conf: 0.6       # coat box must be this sure to let someone through (KNOWN_ISSUES #35 sweep)
+  attire_memory_s: 2.0
+  visibility: {min_h: 0.22, tall_aspect: 2.0, min_w_px: 24, max_occlusion: 0.4}   # judge the coat only when the clothes are visible (KNOWN_ISSUES #50)
+  partial_min_h: 0.3          # a box that touches the frame bottom and is < 30% of its height (head only) is not zone-checked (KNOWN_ISSUES #47)
+# max_age 3 s: a person the detector misses for a few frames keeps the same id (it is NOT counted while missing: the
+# tracker only returns people seen in the current frame). With 1.5 s, a 15-min soak gave 24 ids for 2-4 people and
+# every new id meant a new alarm + photo of the same person.
+tracker: {iou_match_threshold: 0.3, max_age_s: 3.0}
+fall: {enabled: false, aspect_ratio_threshold: 1.15, center_drop_ratio: 0.18, drop_window_s: 1.0, still_duration_s: 2.5, still_iou_threshold: 0.7}
+# cooldown 60 s: one alarm (+ one photo) per person per minute while they stay in violation. With 10 s one person
+# sitting in the zone produced 39 alarms in 6.5 min (soak 12/10). The live banner/counters do NOT wait for this:
+# they show what is happening in the current frame.
+alerts: {debounce_s: 3.0, cooldown_s: 60.0, grace_s: 1.0, gpio: 'off'}
+# LED + OLED on the 26-pin header (physical pin -> SoC pin): green 11 = GPIO4_B2, yellow 13 = GPIO4_B3, red 15 = GPIO0_D4;
+# OLED SCL = pin 5, SDA = pin 3 (I2C5, needs `overlays=i2c5-m3` in /boot/orangepiEnv.txt: scripts/setup_panel_board.sh).
+# Missing wiring / permission only logs a warning. States as on the web page: green AN TOÀN, yellow CHÚ Ý / MẤT TÍN HIỆU, red BÁO ĐỘNG.
+panel:
+  enabled: true
+  leds: {green: GPIO4_B2, yellow: GPIO4_B3, red: GPIO0_D4}
+  active_high: true       # LED anode on the pin, cathode through a resistor to GND; false if the LED is wired to 3.3V
+  hold_s: 10              # stay yellow this long after an alarm ends
+  oled: {enabled: true, i2c_controller: fead0000, address: 0x3C, driver: ssd1306, rotate: 0}
+# phone message (Zalo Bot) when an alarm fires; inactive until secrets/zalo.json exists (scripts/zalo_setup.py), picked up without a restart.
+# Several alarms within min_interval_s become one message.
+notify: {enabled: true, channel: zalo, secret_file: secrets/zalo.json, kinds: [zone_ppe_violation], min_interval_s: 10}
+# photo of each person behind an alarm -> <run dir>/violations/ (crop + annotated frame + violations.jsonl)
+evidence: {enabled: true, padding: 0.15, max_files: 2000}
+dashboard: {enabled: true, host: 127.0.0.1, port: 8000, jpeg_quality: 70}
+async_stages: true

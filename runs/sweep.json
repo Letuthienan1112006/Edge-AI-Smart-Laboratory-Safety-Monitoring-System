@@ -1,0 +1,102 @@
+{
+  "results": [
+    {
+      "backend": "stub",
+      "threads": 1,
+      "imgsz": 320,
+      "latency_ms": {
+        "n": 30,
+        "mean": 8.0,
+        "std": 0.0,
+        "p50": 8.0,
+        "p90": 8.01,
+        "p99": 8.01,
+        "max": 8.02
+      },
+      "fps": 124.92,
+      "temp_c": 27.8
+    },
+    {
+      "backend": "stub",
+      "threads": 2,
+      "imgsz": 320,
+      "latency_ms": {
+        "n": 30,
+        "mean": 8.0,
+        "std": 0.0,
+        "p50": 8.0,
+        "p90": 8.01,
+        "p99": 8.01,
+        "max": 8.01
+      },
+      "fps": 124.93,
+      "temp_c": 27.8
+    },
+    {
+      "backend": "stub",
+      "threads": 4,
+      "imgsz": 320,
+      "latency_ms": {
+        "n": 30,
+        "mean": 8.0,
+        "std": 0.0,
+        "p50": 8.0,
+        "p90": 8.01,
+        "p99": 8.01,
+        "max": 8.01
+      },
+      "fps": 124.93,
+      "temp_c": 27.8
+    },
+    {
+      "backend": "stub",
+      "threads": 1,
+      "imgsz": 416,
+      "latency_ms": {
+        "n": 30,
+        "mean": 8.0,
+        "std": 0.0,
+        "p50": 8.0,
+        "p90": 8.01,
+        "p99": 8.01,
+        "max": 8.01
+      },
+      "fps": 124.93,
+      "temp_c": 27.8
+    },
+    {
+      "backend": "stub",
+      "threads": 2,
+      "imgsz": 416,
+      "latency_ms": {
+        "n": 30,
+        "mean": 8.0,
+        "std": 0.0,
+        "p50": 8.0,
+        "p90": 8.01,
+        "p99": 8.01,
+        "max": 8.01
+      },
+      "fps": 124.93,
+      "temp_c": 27.8
+    },
+    {
+      "backend": "stub",
+      "threads": 4,
+      "imgsz": 416,
+      "latency_ms": {
+        "n": 30,
+        "mean": 8.0,
+        "std": 0.0,
+        "p50": 8.0,
+        "p90": 8.01,
+        "p99": 8.01,
+        "max": 8.01
+      },
+      "fps": 124.93,
+      "temp_c": 27.8
+    }
+  ],
+  "throttled_before": null,
+  "throttled_after": null
+}

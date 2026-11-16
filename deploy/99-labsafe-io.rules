@@ -1,0 +1,5 @@
+# /etc/udev/rules.d/99-labsafe-io.rules -- let the live service (user orangepi, member of plugdev) drive the status LEDs and the OLED.
+# By default /dev/gpiochip* is root-only (0600) and /dev/i2c-* belongs to group i2c, which user orangepi is not in.
+# Installed by scripts/setup_panel_board.sh.
+SUBSYSTEM=="gpio", KERNEL=="gpiochip*", GROUP="plugdev", MODE="0660"
+SUBSYSTEM=="i2c-dev", GROUP="plugdev", MODE="0660"

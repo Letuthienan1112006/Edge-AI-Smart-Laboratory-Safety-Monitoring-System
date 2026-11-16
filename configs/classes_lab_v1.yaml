@@ -1,0 +1,107 @@
+# Classes for the first full A+B+C system on the board (see configs/exp/L1_*, L2_*).
+# stage_a: COCO-80 head, only `person` is kept via keep_classes. stage_b/stage_c: models trained in
+# this repo (KNOWN_ISSUES #28, #29). `lab_coat` and `mask` are NOT here: no model produces them yet,
+# and a required item the detector can never report flags every person forever (app.py guard).
+stage_a:
+  names:
+  - person
+  - bicycle
+  - car
+  - motorcycle
+  - airplane
+  - bus
+  - train
+  - truck
+  - boat
+  - traffic light
+  - fire hydrant
+  - stop sign
+  - parking meter
+  - bench
+  - bird
+  - cat
+  - dog
+  - horse
+  - sheep
+  - cow
+  - elephant
+  - bear
+  - zebra
+  - giraffe
+  - backpack
+  - umbrella
+  - handbag
+  - tie
+  - suitcase
+  - frisbee
+  - skis
+  - snowboard
+  - sports ball
+  - kite
+  - baseball bat
+  - baseball glove
+  - skateboard
+  - surfboard
+  - tennis racket
+  - bottle
+  - wine glass
+  - cup
+  - fork
+  - knife
+  - spoon
+  - bowl
+  - banana
+  - apple
+  - sandwich
+  - orange
+  - broccoli
+  - carrot
+  - hot dog
+  - pizza
+  - donut
+  - cake
+  - chair
+  - couch
+  - potted plant
+  - bed
+  - dining table
+  - toilet
+  - tv
+  - laptop
+  - mouse
+  - remote
+  - keyboard
+  - cell phone
+  - microwave
+  - oven
+  - toaster
+  - sink
+  - refrigerator
+  - book
+  - clock
+  - vase
+  - scissors
+  - teddy bear
+  - hair drier
+  - toothbrush
+stage_b:
+  names:
+  - goggles
+  - gloves
+  # Was [goggles]: nobody in this lab wears goggles, so EVERY person was flagged (decision 03/10, #33). Empty = stage B
+  # still runs (L1/L2 compute benchmarks need its cost) but flags no one. The lab system uses lab_coat zones instead
+  # (configs/classes_lab_v3.yaml + configs/zones_lab.yaml).
+  required: []
+stage_c:
+  names:
+  - fire
+  - smoke
+baseline_v1:
+  names:
+  - person
+  - goggles
+  - lab_coat
+  - gloves
+  - mask
+  - fire
+  - smoke

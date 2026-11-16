@@ -1,0 +1,7 @@
+# Benchmark harness settings. See docs/measurement-protocol.md.
+duration_s: 900          # 15 min minimum — anything shorter measures a burst
+warmup_s: 30             # discarded from statistics
+sample_interval_s: 1.0   # system sampler (RAM, CPU, temp, throttle)
+repeats: 3
+sustained_window_s: 300  # report the mean over the final 5 minutes
+out_dir: runs

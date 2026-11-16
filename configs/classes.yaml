@@ -1,0 +1,25 @@
+# Class taxonomy — decided once, referenced everywhere.
+# Rationale for the split lives in docs/research-plan.md section 2.2.
+
+# Stage A: always-on person detector. Single class on purpose.
+stage_a:
+  names: [person]
+
+# Stage B: PPE detector, runs on person crops only.
+# NOTE: we detect PRESENT items only. "Missing goggles" is derived by
+# association (person box has no goggles box), never labelled directly.
+# Negative classes like `no_goggles` are position-dependent and generalise
+# badly across datasets.
+stage_b:
+  names: [goggles, lab_coat, gloves, mask]
+  # Items required for compliance in this lab. Edit per experiment.
+  required: [goggles, lab_coat]
+
+# Stage C: whole-frame fire/smoke classifier, low cadence.
+stage_c:
+  names: [none, smoke, fire]
+
+# Baseline V1 only (experiment E1): the "naive" single multi-class detector
+# we compare against. Kept so the ablation is reproducible.
+baseline_v1:
+  names: [person, goggles, lab_coat, gloves, mask, fire, smoke]

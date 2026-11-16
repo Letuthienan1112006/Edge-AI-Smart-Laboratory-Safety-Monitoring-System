@@ -1,0 +1,9 @@
+# Restricted zones, in NORMALISED coordinates (0..1) so they survive a
+# resolution change. Build these with: python3 tools/zone_editor.py
+zones:
+  - name: chemical_cabinet
+    severity: high
+    polygon: [[0.62, 0.35], [0.98, 0.35], [0.98, 0.95], [0.62, 0.95]]
+  - name: gas_valve
+    severity: medium
+    polygon: [[0.02, 0.55], [0.28, 0.55], [0.28, 0.98], [0.02, 0.98]]

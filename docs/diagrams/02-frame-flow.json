@@ -1,0 +1,320 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "Luồng xử lý một frame — từ camera tới còi báo",
+    "quality_profile": "showcase",
+    "output": "02-frame-flow.html",
+    "views": [
+      {
+        "id": "hot",
+        "label": "Đường nóng",
+        "focus": [
+          "read",
+          "stage_a",
+          "track",
+          "geo",
+          "debounce",
+          "alert"
+        ],
+        "note": "Chỉ những bước này chạy trên mọi frame. Chúng quyết định FPS."
+      },
+      {
+        "id": "gated",
+        "label": "Hai cổng gating",
+        "focus": [
+          "gate_b",
+          "stage_b",
+          "gate_c",
+          "stage_c"
+        ],
+        "note": "Stage B hỏi 'có người không'; Stage C hỏi 'đến nhịp chưa' — hai câu hỏi độc lập, nằm hai lane khác nhau."
+      },
+      {
+        "id": "telemetry",
+        "label": "Cổng model-còn-sống",
+        "focus": [
+          "stats",
+          "liveness"
+        ],
+        "note": "Đếm detection chứ không chỉ đếm lần gọi: một model chết vẫn cho FPS đẹp."
+      }
+    ]
+  },
+  "lanes": [
+    {
+      "id": "loop",
+      "label": "Vòng frame + nhịp môi trường"
+    },
+    {
+      "id": "person",
+      "label": "Nhánh người (Stage A → B)"
+    },
+    {
+      "id": "decide",
+      "label": "Hình học → quyết định → cảnh báo"
+    },
+    {
+      "id": "measure",
+      "label": "Đo lường",
+      "variant": "exception"
+    }
+  ],
+  "phases": [
+    {
+      "id": "p_in",
+      "label": "Vào",
+      "fromCol": 0,
+      "toCol": 1
+    },
+    {
+      "id": "p_infer",
+      "label": "Suy luận có điều kiện",
+      "fromCol": 2,
+      "toCol": 3,
+      "variant": "emphasis"
+    },
+    {
+      "id": "p_out",
+      "label": "Quyết định + đo",
+      "fromCol": 4,
+      "toCol": 5,
+      "variant": "dashed"
+    }
+  ],
+  "mainPath": [
+    "read",
+    "stage_a",
+    "track",
+    "geo",
+    "debounce",
+    "alert"
+  ],
+  "nodes": [
+    {
+      "id": "read",
+      "lane": "loop",
+      "col": 0,
+      "type": "external",
+      "label": "CameraSource.read()",
+      "sublabel": "luồng riêng",
+      "tag": "trả False khi hết nguồn",
+      "width": 140
+    },
+    {
+      "id": "stage_a",
+      "lane": "person",
+      "col": 1,
+      "type": "backend",
+      "label": "Stage A — person",
+      "sublabel": "mọi frame",
+      "width": 140,
+      "tag": "vô điều kiện"
+    },
+    {
+      "id": "gate_b",
+      "lane": "person",
+      "col": 2,
+      "type": "security",
+      "label": "Có track nào?",
+      "sublabel": "có người mới chạy",
+      "width": 140,
+      "tag": "parallel: bỏ gate"
+    },
+    {
+      "id": "stage_b",
+      "lane": "person",
+      "col": 3,
+      "type": "backend",
+      "label": "Stage B — PPE",
+      "sublabel": "crop người · 2s",
+      "width": 140,
+      "tag": "1 lần / track"
+    },
+    {
+      "id": "gate_c",
+      "lane": "loop",
+      "col": 1,
+      "type": "security",
+      "label": "Đến nhịp 1 Hz?",
+      "sublabel": "theo đồng hồ",
+      "width": 140,
+      "tag": "không theo frame"
+    },
+    {
+      "id": "stage_c",
+      "lane": "loop",
+      "col": 2,
+      "type": "backend",
+      "label": "Stage C — fire/smoke",
+      "sublabel": "toàn khung",
+      "width": 140,
+      "tag": "ảnh hạ mẫu"
+    },
+    {
+      "id": "track",
+      "lane": "decide",
+      "col": 2,
+      "type": "messagebus",
+      "label": "IOUTracker.update",
+      "sublabel": "IoU + fallback tâm",
+      "width": 140,
+      "tag": "sống sót cú ngã"
+    },
+    {
+      "id": "geo",
+      "lane": "decide",
+      "col": 3,
+      "type": "messagebus",
+      "label": "Zone + Fall",
+      "sublabel": "polygon · 3 điều kiện",
+      "width": 140
+    },
+    {
+      "id": "debounce",
+      "lane": "decide",
+      "col": 4,
+      "type": "security",
+      "label": "Debounce + cooldown",
+      "sublabel": "dai dẳng ≥3s",
+      "width": 140,
+      "tag": "cooldown 10s"
+    },
+    {
+      "id": "alert",
+      "lane": "decide",
+      "col": 5,
+      "type": "external",
+      "label": "Buzzer + LED",
+      "sublabel": "off-thread",
+      "width": 140,
+      "tag": "ngoài phép đo"
+    },
+    {
+      "id": "stats",
+      "lane": "measure",
+      "col": 4,
+      "type": "database",
+      "label": "RouterStats",
+      "sublabel": "đếm detection",
+      "width": 140,
+      "tag": "không chỉ lần gọi"
+    },
+    {
+      "id": "liveness",
+      "lane": "measure",
+      "col": 5,
+      "type": "security",
+      "label": "liveness_warning()",
+      "sublabel": "0 det → invalid",
+      "width": 140,
+      "tag": "ultralytics#23753"
+    }
+  ],
+  "edges": [
+    {
+      "id": "e_frame",
+      "from": "read",
+      "to": "stage_a",
+      "label": "frame BGR",
+      "variant": "emphasis"
+    },
+    {
+      "id": "e_boxes",
+      "from": "stage_a",
+      "to": "track",
+      "label": "person boxes"
+    },
+    {
+      "id": "e_count",
+      "from": "stage_a",
+      "to": "gate_b",
+      "label": "số track"
+    },
+    {
+      "id": "e_has",
+      "from": "gate_b",
+      "to": "stage_b",
+      "label": "có người",
+      "role": "branch"
+    },
+    {
+      "id": "e_clock",
+      "from": "read",
+      "to": "gate_c",
+      "label": "đồng hồ",
+      "variant": "dashed"
+    },
+    {
+      "id": "e_due",
+      "from": "gate_c",
+      "to": "stage_c",
+      "label": "đến nhịp",
+      "variant": "dashed",
+      "role": "branch"
+    },
+    {
+      "id": "e_tracks",
+      "from": "track",
+      "to": "geo",
+      "label": "tracks"
+    },
+    {
+      "id": "e_ppe",
+      "from": "stage_b",
+      "to": "debounce",
+      "label": "ppe_violation"
+    },
+    {
+      "id": "e_fire",
+      "from": "stage_c",
+      "to": "debounce",
+      "label": "fire · smoke",
+      "variant": "dashed"
+    },
+    {
+      "id": "e_geo",
+      "from": "geo",
+      "to": "debounce",
+      "label": "fall · zone"
+    },
+    {
+      "id": "e_fire_alarm",
+      "from": "debounce",
+      "to": "alert",
+      "label": "sau ≥3s",
+      "variant": "emphasis"
+    },
+    {
+      "id": "e_tele",
+      "from": "geo",
+      "to": "stats",
+      "label": "mỗi lần gọi stage",
+      "variant": "dashed"
+    },
+    {
+      "id": "e_live",
+      "from": "stats",
+      "to": "liveness",
+      "variant": "dashed"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Chỉ Stage A vô điều kiện",
+      "items": [
+        "Stage A chạy mọi frame và đặt trần FPS; Zone/Fall ăn ké nó nên gần như miễn phí",
+        "Fall cần nằm yên ≥2.5s, debounce cần dai dẳng ≥3s — đổi độ trễ lấy việc giết false positive"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Vì sao đếm detection, không đếm lần gọi",
+      "items": [
+        "YOLO26 INT8 trên RK3588 có thể chạy trơn tru mà detect 0 vật thể (ultralytics#23753)",
+        "liveness_warning() bắt đúng ca đó và đánh dấu run không hợp lệ"
+      ]
+    }
+  ]
+}

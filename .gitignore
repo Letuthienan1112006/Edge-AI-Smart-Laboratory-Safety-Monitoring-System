@@ -1,0 +1,27 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+runs/*/
+data/raw/*
+data/interim/*
+data/processed/*
+!data/**/.gitkeep
+*.pt
+*.onnx
+*.tflite
+*_ncnn_model/
+.venv/
+.claude/
+.playwright-mcp/
+third_party/
+
+# local data that must never be committed (images of people, site-specific zones)
+data/labeled/
+data/zones_live.yaml
+data/external/
+live.env
+secrets/
+
+# raw recordings dropped in the repo root (large, contain faces): never commit
+/*.mp4
+.~lock.*#

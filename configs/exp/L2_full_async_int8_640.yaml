@@ -1,0 +1,66 @@
+# L2: stage B and C on their own threads, A/B/C pinned to NPU cores 0/1/2.
+# Full system A+B+C, all INT8 RKNN. Run with --classes configs/classes_lab_v1.yaml
+affinity:
+  cpus: big
+alerts:
+  buzzer_pin: 17
+  cooldown_s: 10.0
+  debounce_s: 3.0
+  gpio: 'off'
+  led_g_pin: 22
+  led_r_pin: 27
+dashboard:
+  enabled: false
+  host: 0.0.0.0
+  jpeg_quality: 70
+  port: 8000
+fall:
+  aspect_ratio_threshold: 1.15
+  center_drop_ratio: 0.18
+  drop_window_s: 1.0
+  enabled: true
+  still_duration_s: 2.5
+  still_iou_threshold: 0.7
+source:
+  device: 0
+  fps: 30
+  height: 480
+  width: 640
+stage_a:
+  backend: rknn
+  conf: 0.4
+  core_mask: '0'
+  engine: npu
+  imgsz: 640
+  iou: 0.5
+  keep_classes:
+  - person
+  weights: runs/export/yolo26n_int8_640.rknn
+stage_b:
+  enabled: true
+  backend: rknn
+  weights: runs/export/stageB_crops_y26n_best_int8_320.rknn
+  imgsz: 320
+  conf: 0.3
+  iou: 0.5
+  engine: npu
+  core_mask: '1'
+  recheck_interval_s: 2.0
+  crop_padding: 0.1
+stage_c:
+  enabled: true
+  backend: rknn
+  weights: runs/export/stageC_fire_y26n_best_int8_416.rknn
+  imgsz: 416
+  conf: 0.5
+  iou: 0.5
+  engine: npu
+  core_mask: '2'
+  interval_s: 1.0
+tracker:
+  iou_match_threshold: 0.3
+  max_age_s: 1.5
+zones:
+  enabled: true
+  file: configs/zones.yaml
+async_stages: true

@@ -1,0 +1,22 @@
+# Kịch bản quay dữ liệu lab (chạy: make collect-guided). Mỗi scene = một PHIÊN quay riêng, tên phiên
+# <batch>_<id>. Train/val/test được chia THEO PHIÊN (khung liền kề gần như trùng nhau; chia theo khung
+# làm điểm cao giả, KNOWN_ISSUES #17/#29). Trường `split` là gợi ý chia: dùng người/cảnh KHÁC cho test.
+# Khoảng cách tính từ camera tới người. Giữ camera CỐ ĐỊNH ở vị trí demo suốt buổi quay.
+batch: L1
+scenes:
+  - {id: 01_phong_trong,        seconds: 20, split: train, text: "Phòng KHÔNG có ai (ảnh nền, ánh sáng bình thường). Ra khỏi khung hình."}
+  - {id: 02_1m5_khong_do,       seconds: 45, split: train, text: "Đứng cách 1,5 m, quần áo thường, KHÔNG đeo gì. Đứng yên 10 s, rồi xoay chậm một vòng."}
+  - {id: 03_1m5_kinh,           seconds: 45, split: train, text: "1,5 m, CHỈ đeo kính bảo hộ. Nhìn thẳng, rồi quay nghiêng, rồi cúi đầu."}
+  - {id: 04_1m5_gang,           seconds: 45, split: train, text: "1,5 m, CHỈ đeo găng tay. Giơ hai tay trước ngực, rồi thả xuống, rồi cầm một vật."}
+  - {id: 05_1m5_ao_blouse,      seconds: 45, split: train, text: "1,5 m, CHỈ mặc áo blouse (cài khuy). Đứng thẳng, rồi xoay chậm."}
+  - {id: 06_1m5_du_do,          seconds: 60, split: train, text: "1,5 m, đủ BỘ: áo blouse + kính + găng. Đứng, xoay, giơ tay, cúi nhặt đồ."}
+  - {id: 07_3m_khong_do,        seconds: 45, split: train, text: "Cách 3 m, KHÔNG đeo gì. Đứng yên rồi đi qua lại ngang khung hình."}
+  - {id: 08_3m_du_do,           seconds: 60, split: train, text: "3 m, đủ BỘ. Đứng, đi qua lại, giơ tay."}
+  - {id: 09_3m_kinh_gang,       seconds: 45, split: train, text: "3 m, đeo kính + găng, KHÔNG mặc áo blouse."}
+  - {id: 10_5m_khong_do,        seconds: 40, split: train, text: "Cách 5 m (hoặc xa nhất có thể), KHÔNG đeo gì."}
+  - {id: 11_5m_du_do,           seconds: 45, split: train, text: "5 m, đủ BỘ."}
+  - {id: 12_kinh_tren_tran,     seconds: 40, split: train, text: "1,5 m: kính đẩy LÊN TRÁN (không che mắt), găng cầm trong tay (không đeo). Ca khó: đồ có mặt nhưng chưa mặc."}
+  - {id: 13_ngoi_cui,           seconds: 50, split: train, text: "Đủ bộ. Ngồi xuống ghế, đứng lên, cúi nhặt đồ dưới sàn, ngồi xổm. (KHÔNG diễn ngã thật.)"}
+  - {id: 14_nguoc_sang,         seconds: 45, split: val,   text: "Đứng quay lưng về phía cửa sổ (ngược sáng), đủ bộ rồi không đeo gì, mỗi kiểu 20 s."}
+  - {id: 15_hai_nguoi_a,        seconds: 60, split: test,  text: "HAI người, người thứ hai KHÔNG phải bạn: một người đủ bộ, một người không đeo gì, đứng cách nhau, đổi chỗ giữa chừng."}
+  - {id: 16_nguoi_khac_du_do,   seconds: 60, split: test,  text: "Người KHÁC (không phải bạn) đủ bộ, tự do đi lại, đứng, giơ tay ở 1,5 m, 3 m."}

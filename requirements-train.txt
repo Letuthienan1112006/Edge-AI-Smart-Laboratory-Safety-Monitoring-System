@@ -1,0 +1,23 @@
+# Laptop / training machine (RTX 3050 6GB, CUDA).
+# Install torch FIRST from the CUDA index, then the rest:
+#   pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121
+#   pip install -r requirements-train.txt
+ultralytics>=8.3.0
+opencv-python>=4.8
+numpy>=1.24,<2
+pyyaml>=6.0
+psutil>=5.9
+onnx>=1.15
+onnxruntime>=1.17
+ncnn>=1.0.2024          # needed for the NCNN export path
+tensorflow>=2.16        # only for the TFLite/INT8 export; not needed on the Pi
+
+# rknn-toolkit2 -- convert ONNX -> .rknn for the RK3588S NPU (Orange Pi 5).
+# Install by hand, NOT pinned here: Rockchip ships it as a direct wheel
+# download tied to a specific librknnrt.so ABI, not a stable PyPI release
+# train, and we do not know which exact version first fixes
+# ultralytics#23340/#23312 (see KNOWN_ISSUES.md, docs/rknn-pipeline.md).
+# The real gate for a converted model is functional parity
+# (scripts/validate_conversion.py), not this version number. Runs on this
+# laptop ONLY -- never on the board, which uses the separate
+# rknn-toolkit-lite2 package in requirements-edge.txt instead.

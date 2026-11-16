@@ -1,0 +1,68 @@
+# Quay ở LAB cho (1) video demo dự phòng, (2) chấm nhận diện theo sự kiện, (3) dữ liệu fine-tune áo lab.
+# Cue theo giây được in lên màn hình board (kèm tiếng bíp) và ghi vào meta.json cùng số khung -> có đáp án sẵn.
+# Chạy trên board:  python3 scripts/collect_guided.py --plan configs/collection_plan_demo.yaml   (dừng labsafe-live trước: camera dùng chung)
+# A = người MẶC áo lab (cài khuy), áo trong màu tối.  B = người KHÔNG áo lab, áo màu tối.  Vùng = sàn đã dán băng keo / vùng vẽ trên dashboard.
+# Một người cũng làm được: làm lần lượt vai A rồi vai B; bỏ cảnh 07 (cần 2 người).
+batch: DM
+scenes:
+  - id: 01_phong_trong
+    seconds: 15
+    split: test
+    text: "Phòng KHÔNG có ai trong khung hình."
+  - id: 02_co_ao_cai_khuy
+    seconds: 60
+    split: test
+    text: "A mặc áo lab CÀI KHUY: đi qua lại, đứng xa rồi lại gần camera, vào vùng 2 lần. KHÔNG được báo."
+    cues:
+      - {t: 8, say: "A đi qua lại ngoài vùng, xa camera"}
+      - {t: 20, say: "A bước VÀO vùng, đứng yên", event: {type: enter, who: A, coat: true}}
+      - {t: 32, say: "A bước RA", event: {type: leave, who: A}}
+      - {t: 40, say: "A đi lại GẦN camera rồi VÀO vùng", event: {type: enter, who: A, coat: true}}
+      - {t: 52, say: "A bước RA", event: {type: leave, who: A}}
+  - id: 03_co_ao_mo_khuy
+    seconds: 45
+    split: test
+    text: "A mặc áo lab MỞ KHUY, xoay người, giơ tay, vào vùng. KHÔNG được báo."
+    cues:
+      - {t: 8, say: "A bước VÀO vùng, xoay người chậm", event: {type: enter, who: A, coat: true}}
+      - {t: 25, say: "A giơ tay, cúi nhẹ"}
+      - {t: 36, say: "A bước RA", event: {type: leave, who: A}}
+  - id: 04_khong_ao
+    seconds: 60
+    split: test
+    text: "B KHÔNG áo lab (áo màu tối): vào vùng đứng yên 2 lần. PHẢI báo mỗi lần."
+    cues:
+      - {t: 8, say: "B bước VÀO vùng, đứng yên", event: {type: enter, who: B, coat: false}}
+      - {t: 22, say: "B bước RA", event: {type: leave, who: B}}
+      - {t: 34, say: "B bước VÀO vùng, đứng yên", event: {type: enter, who: B, coat: false}}
+      - {t: 50, say: "B bước RA", event: {type: leave, who: B}}
+  - id: 05_ao_thun_trang
+    seconds: 45
+    split: test
+    text: "B mặc ÁO THUN/SƠ MI TRẮNG (không phải áo lab): vào vùng đứng yên. PHẢI báo (áo trắng thường không phải áo lab)."
+    cues:
+      - {t: 8, say: "B (áo trắng thường) bước VÀO vùng, đứng yên", event: {type: enter, who: B, coat: false}}
+      - {t: 30, say: "B bước RA", event: {type: leave, who: B}}
+  - id: 06_mac_coi_trong_vung
+    seconds: 75
+    split: test
+    text: "B vào vùng không áo, MẶC áo lab tại chỗ, rồi CỞI ra. Báo -> hết báo -> báo lại."
+    cues:
+      - {t: 8, say: "B bước VÀO vùng (không áo)", event: {type: enter, who: B, coat: false}}
+      - {t: 25, say: "B MẶC áo lab, cài khuy, đứng yên", event: {type: wear, who: B}}
+      - {t: 48, say: "B CỞI áo lab, đứng yên", event: {type: unwear, who: B}}
+      - {t: 66, say: "B bước RA", event: {type: leave, who: B}}
+  - id: 07_hai_nguoi
+    seconds: 60
+    split: test
+    text: "CẦN 2 NGƯỜI: A (có áo) và B (không áo) cùng vào vùng, đi ngang qua nhau. Chỉ B bị báo."
+    cues:
+      - {t: 8, say: "A bước VÀO vùng", event: {type: enter, who: A, coat: true}}
+      - {t: 14, say: "B bước VÀO vùng", event: {type: enter, who: B, coat: false}}
+      - {t: 30, say: "A và B đi NGANG QUA NHAU", event: {type: occlude, who: "A,B"}}
+      - {t: 46, say: "B bước RA", event: {type: leave, who: B}}
+      - {t: 52, say: "A bước RA", event: {type: leave, who: A}}
+  - id: 08_ao_lab_2
+    seconds: 45
+    split: train
+    text: "DỮ LIỆU FINE-TUNE: A mặc ÁO LAB THỨ HAI, đi khắp khung hình, gần/xa, xoay người, cài rồi mở khuy (không cần cue)."

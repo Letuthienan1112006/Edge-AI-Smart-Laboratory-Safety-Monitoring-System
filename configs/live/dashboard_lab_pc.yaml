@@ -1,0 +1,42 @@
+# Live (laptop): web dashboard with the lab model in PyTorch, for checking the page on recorded frames / a video.
+#   PYTHONPATH=src python3 -m labsafe.app --config configs/live/dashboard_lab_pc.yaml \
+#       --classes configs/classes_lab_v3.yaml --source data/interim/demo/boot014_demo.mp4 --demo-video --no-display
+# then open http://127.0.0.1:8000
+source: {device: 0, width: 640, height: 480, fps: 30}
+stage_a:
+  backend: ultralytics
+  weights: /mnt/big/AGV_ANLEE/weights/lab_v6_best.pt
+  imgsz: 640
+  conf: 0.4
+  iou: 0.5
+  keep_classes: [person, lab_coat]
+  engine: cpu_any
+stage_b: {enabled: false}
+# fire/smoke (stage C) and fall detection are switched OFF in the product (21/10, owner's decision: lab-coat rule only)
+stage_c:
+  enabled: false
+  backend: ultralytics
+  weights: /mnt/big/AGV_ANLEE/weights/stageC_fire_y26n_best.pt
+  imgsz: 416
+  conf: 0.5
+  iou: 0.5
+  engine: cpu_any
+  interval_s: 1.0
+zones:
+  enabled: true
+  file: configs/zones_lab.yaml
+  attire_min_conf: 0.6       # coat box must be this sure to let someone through (KNOWN_ISSUES #35 sweep)
+  attire_memory_s: 0.3        # the demo video is a TIMELAPSE (1 photo / 4 s at 10 fps): 2 s here = 80 s of real time and a coat
+                               # seen on a merged two-person box stayed on the person in a black shirt (KNOWN_ISSUES #51). Board: 2.0.
+  visibility: {min_h: 0.22, tall_aspect: 2.0, min_w_px: 24, max_occlusion: 0.4}   # judge the coat only when the clothes are visible (KNOWN_ISSUES #50)
+tracker: {iou_match_threshold: 0.3, max_age_s: 1.5}
+fall: {enabled: false, aspect_ratio_threshold: 1.15, center_drop_ratio: 0.18, drop_window_s: 1.0, still_duration_s: 2.5, still_iou_threshold: 0.7}
+# The demo video is a TIMELAPSE (one photo every 4 s, played at 10 fps): a person rarely keeps the same track for
+# 3 s of video (= 2 min of real time), so the real 3 s debounce almost never fires here. 0.5 s = 5 frames for the demo.
+# The board config keeps 3 s.
+alerts: {debounce_s: 0.5, cooldown_s: 10.0, gpio: 'off'}
+notify: {enabled: false}   # laptop demo replays a fast video: never message a phone from it
+# photo of each person behind an alarm -> <run dir>/violations/ (crop + annotated frame + violations.jsonl)
+evidence: {enabled: true, padding: 0.15, max_files: 2000}
+dashboard: {enabled: true, host: 127.0.0.1, port: 8000, jpeg_quality: 70}
+async_stages: false

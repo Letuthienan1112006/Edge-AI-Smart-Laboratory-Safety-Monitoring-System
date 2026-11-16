@@ -1,0 +1,6 @@
+[Desktop Entry]
+Type=Application
+Name=Lab Safety kiosk
+Comment=Show the lab safety monitoring page full screen on the HDMI monitor
+Exec=/home/orangepi/AI_Challenge/deploy/labsafe-kiosk.sh
+X-GNOME-Autostart-enabled=true

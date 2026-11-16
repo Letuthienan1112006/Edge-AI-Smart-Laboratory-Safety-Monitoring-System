@@ -1,0 +1,80 @@
+# Runtime configuration for the adaptive pipeline.
+
+source:
+  device: 0              # camera index, or a path to a video file
+  width: 640
+  height: 480
+  fps: 30
+
+stage_a:                 # person detector — always on
+  backend: stub          # stub | ultralytics | ncnn | tflite | onnx | rknn
+  weights: null
+  imgsz: 320
+  conf: 0.40
+  iou: 0.50
+  engine: cpu_any        # npu | cpu_big | cpu_little | cpu_any -- see optimize/engine_map.py
+  core_mask: auto        # only used when engine: npu -- auto | 0 | 1 | 2 | all
+
+stage_b:                 # PPE — gated on person presence
+  enabled: true
+  backend: stub
+  weights: null
+  imgsz: 192
+  conf: 0.45
+  # Do not re-check the same tracked person more often than this.
+  # PPE state changes slowly; checking every frame is pure waste.
+  recheck_interval_s: 2.0
+  crop_padding: 0.12
+  engine: cpu_any
+  core_mask: auto
+
+stage_c:                 # fire / smoke — independent low cadence
+  enabled: true
+  backend: stub
+  weights: null
+  imgsz: 224
+  conf: 0.60
+  interval_s: 1.0        # 1 Hz. Fire does not need 30 Hz. See research-plan.
+  engine: cpu_any
+  core_mask: auto
+
+fall:                    # geometry + time, no model
+  enabled: true
+  aspect_ratio_threshold: 1.15   # w/h above this = lying-down-ish
+  center_drop_ratio: 0.18        # bbox centre must drop this much of frame h
+  drop_window_s: 1.0             # ...within this window
+  still_duration_s: 2.5          # ...and stay down this long before alarming
+  still_iou_threshold: 0.70      # "stays down" = boxes keep overlapping
+
+zones:                   # restricted areas — pure geometry, no model
+  enabled: true
+  file: configs/zones.yaml
+
+tracker:
+  max_age_s: 1.5         # drop a track unseen for this long
+  iou_match_threshold: 0.30
+
+alerts:
+  debounce_s: 3.0        # a violation must persist before it alarms
+  cooldown_s: 10.0       # ...and does not re-alarm within this window
+  # libgpiod line offsets on `gpio_chip` -- NOT BCM numbers on a non-Pi
+  # board. Find them with `gpioinfo`. On a Raspberry Pi the offsets happen
+  # to equal BCM numbers; on an Orange Pi 5 they do not.
+  gpio_chip: gpiochip0
+  buzzer_pin: 17
+  led_r_pin: 27
+  led_g_pin: 22
+  gpio: auto             # auto | on | off  (auto = on only if a GPIO lib exists)
+
+dashboard:
+  enabled: true
+  host: 0.0.0.0
+  port: 8000
+  jpeg_quality: 70
+  # Streaming costs CPU. Keep off during benchmark runs.
+
+affinity:                # big.LITTLE scheduling (RK3588S and other hetero SoCs)
+  # null = let the scheduler decide (and let it into your p99).
+  # "big" = pin to the fastest cluster, resolved at runtime by arm_probe.
+  # A literal list like [4,5,6,7] pins to those CPUs exactly.
+  cpus: big

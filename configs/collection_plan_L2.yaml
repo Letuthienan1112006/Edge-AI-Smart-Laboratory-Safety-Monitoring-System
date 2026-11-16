@@ -1,0 +1,26 @@
+# Ngày thu dữ liệu thứ 2 (batch L2). Mục tiêu đo được, không phải "thu thêm cho nhiều":
+#  (1) ảnh ÂM TÍNH: người mặc đồ trắng KHÔNG phải áo blouse -> model hiện gọi 19-20/20 là áo lab (KNOWN_ISSUES #34/#35);
+#  (2) người MỚI, ngày KHÁC -> tập test thật (phiên L2_t* = split test, KHÔNG dùng để train);
+#  (3) VIDEO 30 FPS liên tục để đo luật vùng cấm (bám người >= 3 s); ảnh chụp 4 s/khung không đo được chuyện này.
+# Dùng cùng góc camera như ngày trước (configs/zones_lab.yaml vẽ theo góc đó). Nếu dời camera: ghi lại và vẽ lại vùng.
+# Chạy: make collect-guided ARGS="--plan configs/collection_plan_L2.yaml" (trên board). Mỗi scene = một phiên video thô.
+# Mỗi người tham gia ký tên cho phép quay (ảnh/video có mặt người thật).
+batch: L2
+scenes:
+  - {id: 01_phong_trong,       seconds: 20, split: train, text: "Phòng KHÔNG có ai. Ra khỏi khung hình."}
+  - {id: 02_ao_thun_trang,     seconds: 60, split: train, text: "Người mặc ÁO THUN TRẮNG TRƠN (không phải áo lab): đứng, đi qua lại, xoay, cúi, giơ tay. Làm với 3 người, MỖI NGƯỜI 20 s."}
+  - {id: 03_so_mi_trang,       seconds: 60, split: train, text: "Người mặc SƠ MI TRẮNG hoặc áo sáng màu (không phải áo lab), 3 người, mỗi người 20 s. Có cả sơ mi bỏ vạt và không bỏ vạt."}
+  - {id: 04_dong_phuc,         seconds: 60, split: train, text: "Đồng phục trắng-xanh / áo khoác sáng màu / áo có hình lớn: 3 người, mỗi người 20 s."}
+  - {id: 05_ao_lab_cai_khuy,   seconds: 60, split: train, text: "Áo blouse CÀI KHUY: đứng thẳng, đi qua lại, giơ tay, cúi. 3 người khác nhau, mỗi người 20 s."}
+  - {id: 06_ao_lab_mo,         seconds: 60, split: train, text: "Áo blouse MỞ (không cài), mặc bên ngoài áo màu khác. 3 người, mỗi người 20 s."}
+  - {id: 07_cam_ao_lab,        seconds: 45, split: train, text: "CẦM áo blouse trên tay / vắt trên ghế / treo trên giá (KHÔNG mặc), người mặc áo thường đứng cạnh. Ca khó: áo có mặt mà chưa mặc."}
+  - {id: 08_ngoi_cui,          seconds: 60, split: train, text: "Mặc blouse rồi ngồi ghế, đứng lên, cúi nhặt đồ, ngồi xổm. Rồi lặp lại với áo thun trắng. (KHÔNG diễn ngã thật.)"}
+  - {id: 09_xa_5m,             seconds: 45, split: train, text: "Cách camera xa nhất có thể: 2 người, một blouse, một áo thun trắng."}
+  - {id: 10_ngoc_sang,         seconds: 45, split: val,   text: "Quay lưng về phía cửa sổ (ngược sáng), blouse rồi áo thun trắng, mỗi kiểu 20 s."}
+  - {id: 11_vung_co_ao,        seconds: 60, split: train, text: "ĐO LUẬT VÙNG: 3 người mặc blouse lần lượt BƯỚC VÀO sàn trắng, đứng 10 s, bước ra. Quay VIDEO liên tục."}
+  - {id: 12_vung_khong_ao,     seconds: 60, split: train, text: "ĐO LUẬT VÙNG: 3 người KHÔNG mặc blouse (áo thun/sơ mi thường) lần lượt bước vào sàn trắng, đứng 10 s, bước ra."}
+  # --- TEST: người CHƯA TỪNG xuất hiện trong dữ liệu cũ, ngày khác. Tuyệt đối không dùng để train. ---
+  - {id: 13_test_moi_ao_lab,   seconds: 90, split: test,  text: "TEST: 3-4 người MỚI mặc blouse (cài và mở), tự do đi lại, đứng, ngồi, giơ tay ở 1,5 m, 3 m, 5 m."}
+  - {id: 14_test_moi_ao_trang, seconds: 90, split: test,  text: "TEST: CÙNG những người đó, KHÔNG mặc blouse: áo thun trắng, sơ mi trắng, áo thường. Cùng cách đi lại."}
+  - {id: 15_test_hon_hop,      seconds: 120, split: test, text: "TEST: 5-6 người mới trộn lẫn (có áo / không áo), tự do như đang làm việc. Quay VIDEO liên tục."}
+  - {id: 16_test_vung,         seconds: 90, split: test,  text: "TEST VÙNG: lần lượt từng người mới bước vào sàn trắng, đứng 10 s, bước ra: người mặc blouse trước, người không áo sau. GHI GIỜ ĐIỆN THOẠI từng lượt vào/ra (để đối chiếu)."}

@@ -1,0 +1,53 @@
+# COCO-80 class taxonomy — for the un-fine-tuned COCO-pretrained checkpoint
+# ONLY (runs/export/yolo26n_fp16_640.rknn / yolo26n_640.onnx). This project's
+# real, product taxonomy lives in configs/classes.yaml (stage_a: [person]);
+# that file is what a fine-tuned model must eventually match.
+#
+# Why this file exists: feeding the COCO-80 checkpoint's 80-channel output
+# into a config that declares `stage_a.names: [person]` crashes inside
+# `yolo_decode(..., expect_nc=1)` at warmup (KNOWN_ISSUES.md #20). This file
+# lets stage A build with the correct channel count; pair it with
+# `stage_a.keep_classes: [person]` in the pipeline config so the router only
+# ever sees the one class this project cares about -- without that filter,
+# chairs/laptops/bottles would be tracked, zoned and fall-detected as if
+# they were people.
+#
+# Order matches Ultralytics' own coco.yaml (id 0..79) exactly -- verified
+# against the real sidecar on the board, not retyped from memory:
+#   ssh orangepi 'python3 -c "import json;print(json.load(open(
+#     \"AI_Challenge/runs/export/yolo26n_fp16_640.rknn.card.json\"
+#   ))[\"class_names\"])"'
+# If a future re-export ever changes this order, RKNNBackend.__init__'s
+# card.class_names guard (see backends.py) will refuse to load rather than
+# silently mislabel classes.
+#
+# Once a real person/PPE-fine-tuned model exists, go back to classes.yaml --
+# this file is a bridge for evaluating the un-fine-tuned checkpoint only.
+stage_a:
+  names:
+    [
+      person, bicycle, car, motorcycle, airplane, bus, train, truck, boat,
+      traffic light, fire hydrant, stop sign, parking meter, bench, bird,
+      cat, dog, horse, sheep, cow, elephant, bear, zebra, giraffe, backpack,
+      umbrella, handbag, tie, suitcase, frisbee, skis, snowboard,
+      sports ball, kite, baseball bat, baseball glove, skateboard,
+      surfboard, tennis racket, bottle, wine glass, cup, fork, knife, spoon,
+      bowl, banana, apple, sandwich, orange, broccoli, carrot, hot dog,
+      pizza, donut, cake, chair, couch, potted plant, bed, dining table,
+      toilet, tv, laptop, mouse, remote, keyboard, cell phone, microwave,
+      oven, toaster, sink, refrigerator, book, clock, vase, scissors,
+      teddy bear, hair drier, toothbrush,
+    ]
+
+# Stage B / stage C: unchanged from configs/classes.yaml -- the COCO
+# checkpoint only replaces stage A, and neither B nor C runs in this
+# checkpoint's live-run configs (N1L/N0L both disable stage_b/stage_c).
+stage_b:
+  names: [goggles, lab_coat, gloves, mask]
+  required: [goggles, lab_coat]
+
+stage_c:
+  names: [none, smoke, fire]
+
+baseline_v1:
+  names: [person, goggles, lab_coat, gloves, mask, fire, smoke]

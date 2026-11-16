@@ -1,0 +1,83 @@
+# Kịch bản quay VIDEO 30 FPS có "đáp án sự kiện" (ground truth) để đo cảnh báo theo SỰ KIỆN, không theo ảnh:
+# grace_s, hysteresis áo, bộ bám, té ngã. Mỗi scene có các "cue": tại giây t của video, màn hình board in ra việc cần làm
+# (và còi bíp), và máy ghi lại cue đó ở KHUNG số mấy trong meta.json -> đáp án nằm sẵn trong file, không phải ghi tay.
+# Chạy trên board: make collect-guided PLAN=configs/collection_plan_events.yaml  (hoặc ARGS="--plan ..."). Cần 3 người: A, B, C.
+#   A = mặc blouse cài khuy.  B và C = KHÔNG mặc blouse (áo thường). Vùng cấm = sàn trắng (configs/zones_lab.yaml).
+# event.type: enter | leave | wear | unwear | sit | stand | crouch | fall.  event.coat: người đó đang mặc blouse hay không.
+batch: EV
+scenes:
+  - id: 01_co_ao
+    seconds: 120
+    split: test
+    text: "A (CÓ blouse) vào sàn trắng 2 lần. KHÔNG được có cảnh báo nào."
+    cues:
+      - {t: 10, say: "A bước VÀO sàn trắng", event: {type: enter, who: A, coat: true}}
+      - {t: 35, say: "A bước RA", event: {type: leave, who: A}}
+      - {t: 60, say: "A bước VÀO sàn trắng", event: {type: enter, who: A, coat: true}}
+      - {t: 90, say: "A bước RA", event: {type: leave, who: A}}
+  - id: 02_khong_ao
+    seconds: 120
+    split: test
+    text: "B (KHÔNG áo) vào sàn trắng. Lần 1 và 3 đứng 25-30 s (phải có cảnh báo), lần 2 chỉ băng qua 2 s (không được báo)."
+    cues:
+      - {t: 10, say: "B bước VÀO sàn trắng, đứng yên", event: {type: enter, who: B, coat: false}}
+      - {t: 35, say: "B bước RA", event: {type: leave, who: B}}
+      - {t: 55, say: "B băng NHANH qua sàn trắng (chỉ ~2 s)", event: {type: enter, who: B, coat: false}}
+      - {t: 57, say: "B ra khỏi sàn trắng", event: {type: leave, who: B}}
+      - {t: 80, say: "B bước VÀO sàn trắng, đứng yên", event: {type: enter, who: B, coat: false}}
+      - {t: 110, say: "B bước RA", event: {type: leave, who: B}}
+  - id: 03_doi_ao
+    seconds: 120
+    split: test
+    text: "B vào sàn trắng KHÔNG áo, giữa chừng MẶC blouse, rồi CỞI ra, rồi ra khỏi sàn."
+    cues:
+      - {t: 10, say: "B bước VÀO sàn trắng (không áo)", event: {type: enter, who: B, coat: false}}
+      - {t: 40, say: "B MẶC blouse (cài khuy), đứng yên", event: {type: wear, who: B}}
+      - {t: 70, say: "B CỞI blouse (đặt lên ghế/tay), đứng yên", event: {type: unwear, who: B}}
+      - {t: 100, say: "B bước RA", event: {type: leave, who: B}}
+  - id: 04_che_nhau
+    seconds: 120
+    split: test
+    text: "A (có áo) và B (không áo) cùng trong sàn trắng, đi ngang qua nhau và che nhau trước camera."
+    cues:
+      - {t: 10, say: "A bước VÀO sàn trắng", event: {type: enter, who: A, coat: true}}
+      - {t: 20, say: "B bước VÀO sàn trắng", event: {type: enter, who: B, coat: false}}
+      - {t: 40, say: "A và B ĐI NGANG QUA NHAU, che nhau ~3 s", event: {type: occlude, who: "A,B"}}
+      - {t: 65, say: "A và B ĐI NGANG QUA NHAU lần nữa, che nhau", event: {type: occlude, who: "A,B"}}
+      - {t: 90, say: "B bước RA", event: {type: leave, who: B}}
+      - {t: 100, say: "A bước RA", event: {type: leave, who: A}}
+  - id: 05_ra_vao_nhanh
+    seconds: 60
+    split: test
+    text: "B (không áo) ra vào sàn trắng 3 lần, mỗi lần ở trong ~6 s."
+    cues:
+      - {t: 5, say: "B VÀO", event: {type: enter, who: B, coat: false}}
+      - {t: 11, say: "B RA", event: {type: leave, who: B}}
+      - {t: 20, say: "B VÀO", event: {type: enter, who: B, coat: false}}
+      - {t: 26, say: "B RA", event: {type: leave, who: B}}
+      - {t: 35, say: "B VÀO", event: {type: enter, who: B, coat: false}}
+      - {t: 41, say: "B RA", event: {type: leave, who: B}}
+  - id: 06_ngoi_cui
+    seconds: 60
+    split: test
+    text: "ĐO BÁO GIẢ TÉ NGÃ: C (không áo, ĐỨNG NGOÀI sàn trắng) ngồi ghế, đứng lên, cúi nhặt đồ, ngồi xổm. KHÔNG được báo té ngã."
+    cues:
+      - {t: 10, say: "C NGỒI xuống ghế", event: {type: sit, who: C}}
+      - {t: 22, say: "C ĐỨNG lên", event: {type: stand, who: C}}
+      - {t: 32, say: "C CÚI nhặt đồ dưới sàn", event: {type: crouch, who: C}}
+      - {t: 40, say: "C đứng thẳng lại", event: {type: stand, who: C}}
+      - {t: 47, say: "C NGỒI XỔM", event: {type: crouch, who: C}}
+      - {t: 55, say: "C đứng lên", event: {type: stand, who: C}}
+  - id: 07_te_nga_tren_dem
+    seconds: 120
+    split: test
+    text: "TÙY CHỌN, AN TOÀN: té ngã DÀN DỰNG trên đệm/nệm dày, ngã chậm, có người đỡ bên cạnh. Mỗi 20 s một lần. Không làm nếu không có đệm."
+    cues:
+      - {t: 10, say: "C NGÃ chậm trên đệm (nằm yên ~4 s)", event: {type: fall, who: C}}
+      - {t: 20, say: "C ĐỨNG lên", event: {type: stand, who: C}}
+      - {t: 35, say: "C NGÃ chậm trên đệm (nằm yên ~4 s)", event: {type: fall, who: C}}
+      - {t: 45, say: "C ĐỨNG lên", event: {type: stand, who: C}}
+      - {t: 60, say: "C NGÃ chậm trên đệm (nằm yên ~4 s)", event: {type: fall, who: C}}
+      - {t: 70, say: "C ĐỨNG lên", event: {type: stand, who: C}}
+      - {t: 85, say: "C NGÃ chậm trên đệm (nằm yên ~4 s)", event: {type: fall, who: C}}
+      - {t: 95, say: "C ĐỨNG lên", event: {type: stand, who: C}}

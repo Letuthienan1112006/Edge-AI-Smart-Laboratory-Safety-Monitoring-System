@@ -1,0 +1,8 @@
+# Lab model lab_v6 (YOLO26n, 2 classes): boot006 + boot014 + boot018 (two camera angles) + 238 COCO people in white tops as lab_coat negatives (KNOWN_ISSUES #40).
+# stage_a outputs BOTH classes: `person` boxes become people, `lab_coat` boxes are attached to the person that contains
+# them and checked by zones with `requires: [lab_coat]` (configs/zones_lab.yaml). No stage_b: the old goggles/gloves
+# model was trained on construction sites and its required-goggles rule flags everybody (#33).
+stage_a:
+  names: [person, lab_coat]
+stage_c:
+  names: [fire, smoke]

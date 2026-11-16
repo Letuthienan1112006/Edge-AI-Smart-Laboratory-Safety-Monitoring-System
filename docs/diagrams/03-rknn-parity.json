@@ -1,0 +1,234 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "YOLO26 → RKNN: convert và cổng kiểm định parity",
+    "quality_profile": "showcase",
+    "output": "03-rknn-parity.html",
+    "views": [
+      {
+        "id": "happy",
+        "label": "Đường thành công",
+        "focus": [
+          "weights",
+          "export",
+          "collect",
+          "model",
+          "parity",
+          "bench"
+        ],
+        "note": "Không con số nào được vào báo cáo nếu chưa qua cổng parity."
+      },
+      {
+        "id": "silent",
+        "label": "Ba chỗ hỏng âm thầm",
+        "focus": [
+          "collect",
+          "parity",
+          "fail"
+        ],
+        "note": "Cả ba đều convert xong, chạy không lỗi, và sai — nên cả ba đều phải fail ồn ào."
+      },
+      {
+        "id": "reference",
+        "label": "Tham chiếu để so",
+        "focus": [
+          "onnx",
+          "parity"
+        ],
+        "note": "Không có model gốc để đối chiếu thì 'parity' không có nghĩa gì."
+      }
+    ]
+  },
+  "lanes": [
+    {
+      "id": "host",
+      "label": "Máy x86 Linux — export RKNN không chạy được trên ARM64"
+    },
+    {
+      "id": "artifact",
+      "label": "Artefact + model card"
+    },
+    {
+      "id": "gate",
+      "label": "Cổng parity",
+      "variant": "exception"
+    },
+    {
+      "id": "board",
+      "label": "Orange Pi 5 — đo"
+    }
+  ],
+  "phases": [
+    {
+      "id": "ph_host",
+      "label": "Convert trên x86",
+      "fromCol": 0,
+      "toCol": 2
+    },
+    {
+      "id": "ph_gate",
+      "label": "Kiểm định",
+      "fromCol": 3,
+      "toCol": 4,
+      "variant": "emphasis"
+    },
+    {
+      "id": "ph_board",
+      "label": "Đo trên board",
+      "fromCol": 5,
+      "toCol": 5,
+      "variant": "dashed"
+    }
+  ],
+  "mainPath": [
+    "weights",
+    "export",
+    "collect",
+    "model",
+    "parity",
+    "bench"
+  ],
+  "nodes": [
+    {
+      "id": "weights",
+      "lane": "host",
+      "col": 0,
+      "type": "external",
+      "label": "yolo26n.pt",
+      "sublabel": "checkpoint đã train",
+      "width": 146
+    },
+    {
+      "id": "export",
+      "lane": "host",
+      "col": 1,
+      "type": "backend",
+      "label": "model.export(rknn)",
+      "sublabel": "ép end2end=False",
+      "tag": "INT8 cần ≥50 ảnh calib",
+      "width": 146
+    },
+    {
+      "id": "collect",
+      "lane": "host",
+      "col": 2,
+      "type": "security",
+      "label": "_collect_export()",
+      "sublabel": "file hay thư mục?",
+      "tag": "raise nếu rỗng",
+      "width": 146
+    },
+    {
+      "id": "onnx",
+      "lane": "artifact",
+      "col": 2,
+      "type": "database",
+      "label": "*_640.onnx",
+      "sublabel": "tham chiếu FP32",
+      "width": 146
+    },
+    {
+      "id": "model",
+      "lane": "artifact",
+      "col": 3,
+      "type": "database",
+      "label": "*_fp16_640.rknn",
+      "sublabel": "+ .card.json",
+      "tag": "tên mang imgsz",
+      "width": 146
+    },
+    {
+      "id": "parity",
+      "lane": "gate",
+      "col": 4,
+      "type": "security",
+      "label": "compare_detections()",
+      "sublabel": "8 quy tắc pass/fail",
+      "width": 146
+    },
+    {
+      "id": "fail",
+      "lane": "gate",
+      "col": 5,
+      "type": "security",
+      "label": "exit 2 — model chết",
+      "sublabel": "zero_detection_collapse",
+      "width": 146
+    },
+    {
+      "id": "bench",
+      "lane": "board",
+      "col": 5,
+      "type": "backend",
+      "label": "bench_matrix_npu.sh",
+      "sublabel": "N0…N5, mỗi run có gate",
+      "tag": "ModelCard assert",
+      "width": 146
+    }
+  ],
+  "edges": [
+    {
+      "id": "e1",
+      "from": "weights",
+      "to": "export",
+      "label": "validate_args()"
+    },
+    {
+      "id": "e3",
+      "from": "export",
+      "to": "collect"
+    },
+    {
+      "id": "e4",
+      "from": "collect",
+      "to": "model",
+      "label": "đúng một *.rknn",
+      "variant": "emphasis"
+    },
+    {
+      "id": "e5",
+      "from": "export",
+      "to": "onnx",
+      "label": "--also-onnx",
+      "variant": "dashed"
+    },
+    {
+      "id": "e6",
+      "from": "model",
+      "to": "parity",
+      "label": "ứng viên"
+    },
+    {
+      "id": "e7",
+      "from": "onnx",
+      "to": "parity",
+      "label": "tham chiếu"
+    },
+    {
+      "id": "e8",
+      "from": "parity",
+      "to": "bench",
+      "label": "PASS → exit 0",
+      "variant": "emphasis"
+    },
+    {
+      "id": "e9",
+      "from": "parity",
+      "to": "fail",
+      "label": "detect 0",
+      "variant": "security",
+      "role": "error"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "rose",
+      "title": "Ba ca hỏng âm thầm mà cổng này chặn",
+      "items": [
+        "Export trả về THƯ MỤC — bản cũ im lặng bỏ qua, vẫn báo thành công",
+        "INT8 chạy không crash nhưng detect 0 vật thể (ultralytics#23753)"
+      ]
+    }
+  ]
+}
