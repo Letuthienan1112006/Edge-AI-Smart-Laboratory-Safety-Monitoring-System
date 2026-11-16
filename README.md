@@ -79,6 +79,10 @@ PYTHONPATH=src python -m pytest tests -q
 - **Credentials.** The Zalo bot token and the board password live in git-ignored `secrets/`.
 - Running the live system needs the board, the camera and trained weights.
 
+## License
+
+The code, scripts and documents written by the team are released under the [MIT License](LICENSE). The export scripts use third-party tools with their own licences (for example Ultralytics YOLO is AGPL-3.0 and Rockchip's RKNN toolkit has its own terms); check them before redistributing models you train or convert with them.
+
 ## Team
 
 Lê Tự Thiện An (team leader), Trịnh Anh Văn, Võ Nhật Nam, Phạm Trọng Thành.
