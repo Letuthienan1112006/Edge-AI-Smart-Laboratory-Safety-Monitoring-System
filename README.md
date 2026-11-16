@@ -7,6 +7,10 @@ A small box that watches a laboratory camera and raises an alarm when a person *
 [Demo video (32 s)](docs/media/demo_lab.mp4) · [Short paper (Vietnamese, 8 pages)](report/bai_bao_ngan.pdf) · [A2 poster](poster/poster_A2_in.pdf) · [Final-round slides](slides/chung_khao_edge_ai_lab_safety.pptx) · [Full report (Vietnamese)](report/bao_cao.pdf)
 
 <p align="center">
+  <img src="docs/media/first_prize.jpg" width="70%" alt="First prize certificate next to the finished device">
+</p>
+
+<p align="center">
   <img src="poster/img/hardware_full.jpg" width="46%" alt="The device: Orange Pi 5 in a 3D-printed case, camera, 3 LEDs, OLED">
   <img src="poster/img/dashboard.png" width="52%" alt="Web dashboard during an alarm">
 </p>
