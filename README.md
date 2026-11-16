@@ -4,15 +4,15 @@
 
 A small box that watches a laboratory camera and raises an alarm when a person **without a lab coat** steps into a **danger zone**. Everything that decides runs on the board's NPU: no video leaves the device. Built on an Orange Pi 5 (Rockchip RK3588S, 6 TOPS NPU) with a USB camera, three status LEDs, an OLED and a web dashboard.
 
-[Demo video (32 s)](docs/media/demo_lab.mp4) · [Short paper (Vietnamese, 8 pages)](report/bai_bao_ngan.pdf) · [A2 poster](poster/poster_A2_in.pdf) · [Final-round slides](slides/chung_khao_edge_ai_lab_safety.pptx) · [Full report (Vietnamese)](report/bao_cao.pdf)
+[Demo video (32 s)](docs/media/demo_lab.mp4) · [Short paper (Vietnamese, 8 pages)](competition/report/bai_bao_ngan.pdf) · [A2 poster](competition/poster/poster_A2_in.pdf) · [Final-round slides](competition/slides/chung_khao_edge_ai_lab_safety.pptx) · [Full report (Vietnamese)](competition/report/bao_cao.pdf)
 
 <p align="center">
   <img src="docs/media/first_prize.jpg" width="70%" alt="First prize certificate next to the finished device">
 </p>
 
 <p align="center">
-  <img src="poster/img/hardware_full.jpg" width="46%" alt="The device: Orange Pi 5 in a 3D-printed case, camera, 3 LEDs, OLED">
-  <img src="poster/img/dashboard.png" width="52%" alt="Web dashboard during an alarm">
+  <img src="competition/poster/img/hardware_full.jpg" width="46%" alt="The device: Orange Pi 5 in a 3D-printed case, camera, 3 LEDs, OLED">
+  <img src="competition/poster/img/dashboard.png" width="52%" alt="Web dashboard during an alarm">
 </p>
 
 ## What it does
@@ -37,12 +37,12 @@ The system never shows SAFE when the camera feed is lost: it shows **NO SIGNAL**
 | Zone rule | 75–86% of coat-less people flagged, 7–9% false alarms | per person on still images, not per event |
 | Stability | 24 h continuous run, RAM 210–220 MB, 0 errors | one run, one configuration |
 
-Full numbers, how each was measured and what is **not** measured: [docs/results.md](docs/results.md), [docs/competition-claims.md](docs/competition-claims.md).
+Full numbers, how each was measured and what is **not** measured: [docs/results.md](docs/results.md), [docs/competition/competition-claims.md](docs/competition/competition-claims.md).
 
 ## Engineering that made the numbers
 
 - **INT8 with split outputs.** The default INT8 export puts box coordinates (0–640 px) and class scores (0–1) in one tensor with one 8-bit scale, so each quantisation step is about 2.5 px and box edges drift: mAP50-95 falls by 18 points. Exporting six raw tensors (box and class per scale), each with its own scale, and decoding on the CPU loses only 0.4 points.
-- **A parity gate before any speed number.** Every converted model is run on the same images through ONNX and the NPU and compared (recall, precision, IoU). It caught four silent conversion failures that still produced fast, plausible-looking output (see [KNOWN_ISSUES.md](KNOWN_ISSUES.md)).
+- **A parity gate before any speed number.** Every converted model is run on the same images through ONNX and the NPU and compared (recall, precision, IoU). It caught four silent conversion failures that still produced fast, plausible-looking output (see [docs/KNOWN_ISSUES.md](docs/KNOWN_ISSUES.md)).
 - **Adaptive scheduling.** Secondary models run asynchronously on their own NPU cores and only when needed: 1.98 W instead of 3.34 W at the same frame rate. Speed comparisons had to pin the DDR clock, otherwise the governor measured itself.
 - **Data with few labels.** Choosing hard frames beat using a bigger model; adding 238 COCO images of ordinary white clothes cut "white T-shirt called a lab coat" from 20/20 to 0–4/20 test images.
 - **Honest failure analysis.** Moving the camera to a very different angle made the model miss every coat (0/122 frames). The report documents this, how it was found and how to avoid it.
@@ -62,12 +62,19 @@ flowchart LR
 | Path | What |
 |---|---|
 | `src/labsafe/` | pipeline, tracker, zone rule, NPU/ONNX backends, web dashboard, LED/OLED panel, Zalo notifier |
-| `scripts/` | export (split-output INT8), parity gate, evaluation, board deployment, measurement tools |
+| `scripts/export/` | split-output INT8 export, NPU-vs-CPU parity gate |
+| `scripts/eval/` | accuracy, per-slice, per-event and zone-rule evaluation |
+| `scripts/bench/` | latency, power and scheduling measurements |
+| `scripts/data/` | data collection, labelling helpers, dataset building |
+| `scripts/train/` | baseline training, distillation, pruning experiments |
+| `scripts/board/` | deployment and operation on the Orange Pi (services, clock, preflight, dashboard) |
+| `scripts/demo/` | demo recording, figures, zone editor |
 | `configs/` | pipeline, class and zone configuration for board and laptop |
+| `deploy/` | systemd units, udev rules, kiosk launcher for the board |
 | `tests/` | about 350 unit tests, no camera or board needed |
-| `docs/` | measurement protocol, results, optimisation notes, rules of the competition |
-| `report/`, `poster/`, `slides/` | the written deliverables (Vietnamese) and their LaTeX / deck sources |
-| `KNOWN_ISSUES.md` | every non-obvious bug found, with cause and how it was verified |
+| `docs/` | measurement protocol, results, optimisation notes; `docs/competition/` for the contest material; [`docs/KNOWN_ISSUES.md`](docs/KNOWN_ISSUES.md) lists every non-obvious bug found, with cause and how it was verified |
+| `competition/` | poster, short paper, full report (Vietnamese) and the final-round slides, with their sources |
+| `requirements/` | Python dependencies for the laptop (`train.txt`) and the board (`edge.txt`) |
 
 ## Run the tests
 
@@ -95,4 +102,4 @@ Lê Tự Thiện An (team leader), Trịnh Anh Văn, Võ Nhật Nam, Phạm Tr�
 
 ## Tóm tắt (tiếng Việt)
 
-Thiết bị giám sát an toàn phòng thí nghiệm chạy hoàn toàn trên NPU của Orange Pi 5: phát hiện người không mặc áo blouse bước vào vùng nguy hiểm do người dùng tự vẽ, cảnh báo qua trang web (kèm ảnh bằng chứng), đèn LED, màn OLED và tin nhắn Zalo. Hệ thống đạt khoảng 30 khung hình/giây, độ trễ p99 41,4 ms, 2,2 W, ổn định 24 giờ. Đóng góp chính: lượng tử hóa INT8 với đầu ra tách (mất 0,4 điểm mAP thay vì 18 điểm), bước kiểm tra tương đương NPU–CPU, chế độ thích nghi (1,98 W so với 3,34 W), và luật cảnh báo chỉ kết luận khi thấy rõ trang phục. Mọi số liệu ghi rõ cách đo và hạn chế; xem [báo cáo](report/bao_cao.pdf), [bài báo ngắn](report/bai_bao_ngan.pdf) và [docs/results.md](docs/results.md).
+Thiết bị giám sát an toàn phòng thí nghiệm chạy hoàn toàn trên NPU của Orange Pi 5: phát hiện người không mặc áo blouse bước vào vùng nguy hiểm do người dùng tự vẽ, cảnh báo qua trang web (kèm ảnh bằng chứng), đèn LED, màn OLED và tin nhắn Zalo. Hệ thống đạt khoảng 30 khung hình/giây, độ trễ p99 41,4 ms, 2,2 W, ổn định 24 giờ. Đóng góp chính: lượng tử hóa INT8 với đầu ra tách (mất 0,4 điểm mAP thay vì 18 điểm), bước kiểm tra tương đương NPU–CPU, chế độ thích nghi (1,98 W so với 3,34 W), và luật cảnh báo chỉ kết luận khi thấy rõ trang phục. Mọi số liệu ghi rõ cách đo và hạn chế; xem [báo cáo](competition/report/bao_cao.pdf), [bài báo ngắn](competition/report/bai_bao_ngan.pdf) và [docs/results.md](docs/results.md).

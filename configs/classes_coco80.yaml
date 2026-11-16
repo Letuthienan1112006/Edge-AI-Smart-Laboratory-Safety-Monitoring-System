@@ -5,7 +5,7 @@
 #
 # Why this file exists: feeding the COCO-80 checkpoint's 80-channel output
 # into a config that declares `stage_a.names: [person]` crashes inside
-# `yolo_decode(..., expect_nc=1)` at warmup (KNOWN_ISSUES.md #20). This file
+# `yolo_decode(..., expect_nc=1)` at warmup (docs/KNOWN_ISSUES.md #20). This file
 # lets stage A build with the correct channel count; pair it with
 # `stage_a.keep_classes: [person]` in the pipeline config so the router only
 # ever sees the one class this project cares about -- without that filter,

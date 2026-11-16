@@ -1,7 +1,7 @@
 # N3b: resolution sweep point, RKNN FP16 @ imgsz 416 (640 is N1).
 # REQUIRES ITS OWN EXPORT at imgsz 416. RKNN fixes the input shape at
 # convert time, so this point of the sweep cannot reuse N1's 640 model:
-#   python3 scripts/export_rknn.py <yolo26n.pt> --imgsz 416 \
+#   python3 scripts/export/export_rknn.py <yolo26n.pt> --imgsz 416 \
 #       --precision fp16 --target rk3588
 # Dashboard and GPIO are off on purpose.
 source:

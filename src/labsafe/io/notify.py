@@ -4,7 +4,7 @@ Only alarms that the decision layer already let through (debounce + cooldown) ar
 into one message, so a crowded zone does not flood the phone. Sending runs on its own thread with a bounded queue: no network, a slow
 API or a revoked token never delays the frame loop; a message that cannot be sent is dropped and counted.
 
-The token + chat id live in a JSON file outside git (`secrets/zalo.json`, written by scripts/zalo_setup.py). The file is re-checked
+The token + chat id live in a JSON file outside git (`secrets/zalo.json`, written by scripts/board/zalo_setup.py). The file is re-checked
 while it is missing, so dropping it on the board turns notifications on without a service restart. The token is part of the API URL:
 never log URLs or request objects here.
 
@@ -147,7 +147,7 @@ class Notifier:
                 log.info("notify: Zalo notifications ON (%s)", self.secret_file)
             elif not self._said_missing:
                 self._said_missing = True
-                log.info("notify: %s not found -> phone notifications off until it appears (scripts/zalo_setup.py)", self.secret_file)
+                log.info("notify: %s not found -> phone notifications off until it appears (scripts/board/zalo_setup.py)", self.secret_file)
         return self._bot
 
     def on_alarm(self, events: list, crops: list | None = None) -> None:
@@ -228,7 +228,7 @@ if __name__ == "__main__":
     if not (a.test or a.test_photo):
         ap.error("give --test or --test-photo")
     if s is None:
-        sys.exit(f"{a.test or a.test_photo}: missing or without token/chat_id (run scripts/zalo_setup.py on the laptop)")
+        sys.exit(f"{a.test or a.test_photo}: missing or without token/chat_id (run scripts/board/zalo_setup.py on the laptop)")
     if a.test_photo:
         import cv2
         import numpy as np

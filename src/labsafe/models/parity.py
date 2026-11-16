@@ -2,7 +2,7 @@
 
 This is the single most important file in the RKNN work. A model can
 convert without error, load without error, and run at full FPS while
-detecting nothing (ultralytics#23753 -- see `KNOWN_ISSUES.md` #3). Every
+detecting nothing (ultralytics#23753 -- see `docs/KNOWN_ISSUES.md` #3). Every
 metric downstream of that -- latency, throughput, power -- is a number
 about a dead model, and nothing about "the pipeline ran" would tell you.
 
@@ -10,7 +10,7 @@ about a dead model, and nothing about "the pipeline ran" would tell you.
 purpose: it never touches a backend, a file, or the network, so it is
 testable with synthetic detections and never needs a board or a real
 model to exercise every branch (`docs/experiment-ids.md` §2.6 of the
-plan). `scripts/validate_conversion.py` is the only piece that talks to
+plan). `scripts/export/validate_conversion.py` is the only piece that talks to
 real backends and real images.
 """
 
@@ -164,7 +164,7 @@ def compare_detections(
 
     if total_cand == 0:
         # Named separately, and placed first: this is exactly
-        # ultralytics#23753 (KNOWN_ISSUES.md #3), and it must never be
+        # ultralytics#23753 (docs/KNOWN_ISSUES.md #3), and it must never be
         # absorbed into a generic "low recall" bucket.
         failures.append("zero_detection_collapse")
 

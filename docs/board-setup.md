@@ -138,11 +138,11 @@ tồn tại trên Orange Pi và số chân BCM của Pi vô nghĩa ở đây).
 ```bash
 git clone <url-repo-của-bạn> ~/AI_Challenge
 cd ~/AI_Challenge
-pip install --break-system-packages -r requirements-edge.txt
+pip install --break-system-packages -r requirements/edge.txt
 ```
 
-Nếu `rknn-toolkit-lite2` trong `requirements-edge.txt` cài lỗi vì
-`librknnrt.so` chưa khớp phiên bản — xem `KNOWN_ISSUES.md` mục về hai
+Nếu `rknn-toolkit-lite2` trong `requirements/edge.txt` cài lỗi vì
+`librknnrt.so` chưa khớp phiên bản — xem `docs/KNOWN_ISSUES.md` mục về hai
 gói `rknn-toolkit2`/`rknn-toolkit-lite2` khác nhau, và
 `docs/rknn-pipeline.md` §0.
 
@@ -271,13 +271,13 @@ make fetch-board
 Kết quả nằm tại `runs/board/board-live-.../`. Mở file `annotated.mp4` bằng
 trình phát video, không gõ đường dẫn MP4 trực tiếp như một lệnh shell.
 
-Sau khi có model đã qua cổng parity (`scripts/validate_conversion.py`,
+Sau khi có model đã qua cổng parity (`scripts/export/validate_conversion.py`,
 `docs/rknn-pipeline.md`) và `runs/export/yolo26n_fp16_640.rknn` tồn tại.
 
 **Model checkpoint hiện có là COCO-80, chưa fine-tune cho taxonomy của
 project (`person` + PPE)** — chạy thẳng với `configs/classes.yaml` (chỉ có
 `[person]`) sẽ crash lúc warmup vì model trả về 80 kênh lớp trong khi
-config chỉ khai 1 (`KNOWN_ISSUES.md` #20). Dùng
+config chỉ khai 1 (`docs/KNOWN_ISSUES.md` #20). Dùng
 `configs/classes_coco80.yaml` + config live riêng (`N1L`), có
 `stage_a.keep_classes: [person]` để router chỉ theo dõi người, không phải
 "bất kỳ vật gì trong 80 lớp COCO".
@@ -315,7 +315,7 @@ PYTHONPATH=src python3 -m labsafe.app --bench --exp N0L_cpu \
 idle, cần root):
 
 ```bash
-sudo bash scripts/board_sampler.sh runs/samples/N1L_sustained.csv 990 1
+sudo bash scripts/board/board_sampler.sh runs/samples/N1L_sustained.csv 990 1
 ```
 
 Xem kết quả: `metrics.json` có khối `router.stage_a_breakdown_ms`
@@ -333,7 +333,7 @@ kèm score trên nhãn track).
    §Phase 2, `data/README.md`).
 2. Convert model YOLO26 sang RKNN — làm trên **laptop x86**, không phải
    trên board (`docs/rknn-pipeline.md`).
-3. Chạy `bash scripts/bench_matrix_npu.sh` trên board sau khi có model
+3. Chạy `bash scripts/bench/bench_matrix_npu.sh` trên board sau khi có model
    đã qua cổng parity.
 
 ## Nếu một mục xác minh KHÔNG ra kết quả như mô tả

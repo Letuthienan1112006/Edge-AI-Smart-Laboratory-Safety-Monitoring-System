@@ -1,4 +1,4 @@
-"""Regression tests for `scripts/board_sampler.sh`.
+"""Regression tests for `scripts/board/board_sampler.sh`.
 
 Runs on a laptop, no root and no board needed: `board_sampler.sh` only runs
 its `main()` body (root check, sysfs discovery, sampling loop) when
@@ -19,7 +19,7 @@ the literal label "Core0" itself --
 
 -- two lines instead of one ("0" from the label, "44" from the value). That
 embedded newline is exactly what corrupted a real captured CSV
-(KNOWN_ISSUES.md #22, see `scripts/board_sampler.sh`'s comment above
+(docs/KNOWN_ISSUES.md #22, see `scripts/board/board_sampler.sh`'s comment above
 `parse_npu_load`). `test_parse_npu_load_returns_one_line_not_two` below is a
 direct regression guard for that: it would fail against the old grep-based
 code (multi-line output) and passes against the current `sed -nE`
@@ -45,7 +45,7 @@ import os
 import subprocess
 from pathlib import Path
 
-SCRIPT = Path(__file__).resolve().parents[1] / "scripts" / "board_sampler.sh"
+SCRIPT = Path(__file__).resolve().parents[1] / "scripts" / "board" / "board_sampler.sh"
 
 
 def _call(fn: str, *args: str) -> str:
@@ -90,7 +90,7 @@ def test_parse_npu_load_real_sample_line():
 
 
 def test_parse_npu_load_returns_one_line_not_two():
-    """Regression guard for the grep-double-match bug (KNOWN_ISSUES.md #22):
+    """Regression guard for the grep-double-match bug (docs/KNOWN_ISSUES.md #22):
     the label "Core0" itself contains a digit, so a second unscoped
     `grep -oE '[0-9]+'` matched both the label's digit and the value,
     printing two lines. Exactly one line must come out."""
@@ -147,7 +147,7 @@ def test_row_matches_header_false_for_a_row_with_an_embedded_newline():
 
 def test_row_matches_header_false_for_a_row_built_from_the_old_buggy_parse_output():
     """Simulates exactly what the old double-grep parse_npu_load produced
-    for one field: npu_vals = $'0\\n44' (KNOWN_ISSUES.md #22), spliced into
+    for one field: npu_vals = $'0\\n44' (docs/KNOWN_ISSUES.md #22), spliced into
     a row the way board_sampler.sh's sampling loop does (`row="${row},${npu_vals}"`)."""
     npu_vals = "0\n44,0,7"  # old bug's multi-line output, one field's worth
     row = f"1712000000.123,{npu_vals}"

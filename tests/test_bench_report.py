@@ -1,5 +1,5 @@
 """`labsafe.bench.report` is the last line of defence against a dead model
-sneaking a shiny FPS number into the results table (`KNOWN_ISSUES.md` #3).
+sneaking a shiny FPS number into the results table (`docs/KNOWN_ISSUES.md` #3).
 These tests build synthetic `runs/<exp>/metrics.json` files -- no bench
 run, no model, no board -- and check that:
 

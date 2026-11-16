@@ -1,10 +1,10 @@
 # N2L: live run on the board, RKNN INT8 (imgsz 640), stage A only -- the INT8
 # counterpart of N1L, identical in every other key so the two differ in one
-# variable only. Exported with scripts/export_rknn.py --precision int8 and a
+# variable only. Exported with scripts/export/export_rknn.py --precision int8 and a
 # calibration set of 150 raw lab C270 frames + coco128
 # (data/raw/lab_calib_20260929); parity gate vs ONNX FP32 PASSED on the board
 # (runs/parity/lab_yolo26n_int8) only after the decoder honoured the card's
-# box_coords="normalized" (KNOWN_ISSUES.md #24). NOT a point in the N-matrix.
+# box_coords="normalized" (docs/KNOWN_ISSUES.md #24). NOT a point in the N-matrix.
 source:
   device: 0
   width: 640

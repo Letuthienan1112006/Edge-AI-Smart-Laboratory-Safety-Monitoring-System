@@ -1,9 +1,9 @@
 # N1L: first live run on the board, same model as N1 (RKNN FP16, imgsz
-# 640), stage A only. NOT a point in the N-matrix (scripts/bench_matrix_npu.sh
+# 640), stage A only. NOT a point in the N-matrix (scripts/bench/bench_matrix_npu.sh
 # does not touch this file) -- it is a one-off evaluation run with:
 #   * `--classes configs/classes_coco80.yaml` (this checkpoint is
 #     COCO-pretrained, not fine-tuned for this project's own person/PPE
-#     taxonomy -- see KNOWN_ISSUES.md #20);
+#     taxonomy -- see docs/KNOWN_ISSUES.md #20);
 #   * stage_a.keep_classes: [person], so the router only ever tracks people,
 #     not "any of 80 COCO classes";
 #   * stage B/C disabled (no PPE/fire model exists yet, and the stub's

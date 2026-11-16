@@ -9,9 +9,9 @@ Tài liệu cho người muốn nghiên cứu cải thiện. Mỗi mục ghi **f
 | Kiến trúc | YOLO26n (Ultralytics), ~2,4 triệu tham số, ~5,3 GFLOPs. Detector một tầng, không anchor |
 | Lớp (tầng A) | 2 lớp: `person`, `lab_coat` (`configs/lab_classes.yaml`) |
 | Khởi tạo | trọng số COCO `yolo26n.pt`, tinh chỉnh toàn bộ |
-| Huấn luyện | 60 epoch, ảnh 640, batch 16, công thức mặc định của Ultralytics (mosaic, HSV, lật ngang, co giãn...), không chỉnh tay. 3 seed. `scripts/train_baseline.py` |
+| Huấn luyện | 60 epoch, ảnh 640, batch 16, công thức mặc định của Ultralytics (mosaic, HSV, lật ngang, co giãn...), không chỉnh tay. 3 seed. `scripts/train/train_baseline.py` |
 | Dữ liệu (lab_v6) | ~1.400 ảnh lab (3 buổi, 2 góc camera) + 238 ảnh COCO người mặc áo trắng làm mẫu âm tính cho `lab_coat` |
-| Xuất ra NPU | ONNX -> RKNN-Toolkit2 2.3.2, **INT8 sau huấn luyện (PTQ)**, hiệu chuẩn bằng ảnh tập train. `scripts/export_rknn.py` |
+| Xuất ra NPU | ONNX -> RKNN-Toolkit2 2.3.2, **INT8 sau huấn luyện (PTQ)**, hiệu chuẩn bằng ảnh tập train. `scripts/export/export_rknn.py` |
 | Đầu ra khi chạy | KHÔNG dùng đầu "không NMS" (end2end): nó làm sập NPU RK3588 (#2). Dùng đầu thường + NMS bằng numpy tự viết |
 | Tiền xử lý | letterbox 640x640 (đệm xám), NHWC uint8; chuẩn hóa (chia 255) nằm TRONG model RKNN. `src/labsafe/models/postprocess.py` |
 | Giải mã | đọc 4 kênh khung + điểm lớp, bỏ khung dưới ngưỡng (người 0,4), **chỉ giải mã lớp cần giữ** (`class_subset`: 2,1 -> 0,38 ms), NMS tham lam theo lớp (IoU 0,5) |
@@ -34,10 +34,10 @@ Chế độ **thích nghi** (mặc định): tầng B chỉ chạy khi có ngư�
 
 ## 3. Quy trình dữ liệu và đánh giá
 
-- Thu: bo mạch chụp 1 ảnh/4 s, bỏ khung tĩnh/tối (`scripts/capture_interval.py`).
-- Chọn ảnh gán: điểm xa nhất trên ảnh nhỏ 48x36 + ảnh model lưỡng lự về áo + bỏ khung không phải góc camera (`scripts/make_batch.py`).
-- Nhãn nháp bằng model, người sửa trên Roboflow; nhập theo **phiên** (`scripts/import_roboflow.py`), chia train/test theo phiên (`scripts/build_lab_dataset.py`).
-- Chấm: AP một bộ chấm chung cho mọi loại chính xác (`scripts/eval_ap.py`); luật vùng chấm theo từng người (`scripts/eval_zone_rule.py`); mỗi cấu hình 3 seed.
+- Thu: bo mạch chụp 1 ảnh/4 s, bỏ khung tĩnh/tối (`scripts/data/capture_interval.py`).
+- Chọn ảnh gán: điểm xa nhất trên ảnh nhỏ 48x36 + ảnh model lưỡng lự về áo + bỏ khung không phải góc camera (`scripts/data/make_batch.py`).
+- Nhãn nháp bằng model, người sửa trên Roboflow; nhập theo **phiên** (`scripts/data/import_roboflow.py`), chia train/test theo phiên (`scripts/data/build_lab_dataset.py`).
+- Chấm: AP một bộ chấm chung cho mọi loại chính xác (`scripts/eval/eval_ap.py`); luật vùng chấm theo từng người (`scripts/eval/eval_zone_rule.py`); mỗi cấu hình 3 seed.
 
 ## 4. Những chỗ có thể cải thiện (xếp theo đáng làm)
 

@@ -1,4 +1,4 @@
-"""Event-level scoring of the alarm stream against scripted ground truth (the cues of scripts/collect_guided.py).
+"""Event-level scoring of the alarm stream against scripted ground truth (the cues of scripts/data/collect_guided.py).
 
 Frame-level accuracy says little about an alarm system: what matters is whether each real violation raised ONE alarm soon enough, and how
 many alarms were raised when nothing was wrong. Ground truth comes from the cues the actors were told at known seconds of the recording.

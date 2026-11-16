@@ -86,7 +86,7 @@ if __name__ == "__main__":
         if dead:
             print(
                 f"\nWARNING: model detected nothing -- FPS below is meaningless for: "
-                f"{', '.join(dead)} (see KNOWN_ISSUES.md #3)"
+                f"{', '.join(dead)} (see docs/KNOWN_ISSUES.md #3)"
             )
         early = [(r["exp_id"], r.get("short_by_s")) for r in rows if r.get("ended_early")]
         if early:
@@ -94,5 +94,5 @@ if __name__ == "__main__":
             print(
                 f"\nWARNING: ended before its duration: {listed}. Sustained FPS "
                 f"over a truncated window is not comparable with a full-length "
-                f"run (see KNOWN_ISSUES.md #6)"
+                f"run (see docs/KNOWN_ISSUES.md #6)"
             )

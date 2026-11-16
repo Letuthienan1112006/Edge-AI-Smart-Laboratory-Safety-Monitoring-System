@@ -12,7 +12,7 @@
 ## 0. Kết quả đo THẬT trên Orange Pi 5 (cập nhật 30/09/2026)
 
 Mọi số dưới đây đo trên board thật (RK3588S, 8 GB, NPU 0.9.8, camera C270 640x480),
-có bằng chứng trong `KNOWN_ISSUES.md` và `.bangiao/`. Chưa có số nào dùng power meter
+có bằng chứng trong `docs/KNOWN_ISSUES.md` và `.bangiao/`. Chưa có số nào dùng power meter
 (chưa mua) nên **chưa có kết luận về năng lượng/sự kiện** (RQ0/RQ2 phần năng lượng).
 Model vẫn là YOLO26n COCO (`person`), chưa fine-tune cho lab.
 
@@ -42,7 +42,7 @@ Model vẫn là YOLO26n COCO (`person`), chưa fine-tune cho lab.
 
 Chạy nối tiếp độ trễ khung p99 là 61 ms; cho B và C chạy bất đồng bộ trên nhân NPU riêng (0/1/2)
 còn 50 ms (-18%), FPS và độ trễ trung vị không đổi vì gating đã làm B+C chỉ tốn ~0,8 ms/khung
-(`KNOWN_ISSUES.md` #30). Tối ưu giải mã chỉ-lớp-cần-giữ giảm bước giải mã của A từ 2,1 xuống
+(`docs/KNOWN_ISSUES.md` #30). Tối ưu giải mã chỉ-lớp-cần-giữ giảm bước giải mã của A từ 2,1 xuống
 0,38 ms (FP16) và 2,6 xuống 0,90 ms (INT8). Chưa kiểm độ chính xác B/C ở lab, chưa đo năng lượng.
 
 ### Đóng góp có bằng chứng tới nay (đề xuất trình bày)
@@ -63,7 +63,7 @@ còn 50 ms (-18%), FPS và độ trễ trung vị không đổi vì gating đã 
 - Chưa đo năng lượng (RQ0/RQ2), chưa chạy adaptive vs parallel trên board.
 - Stage B (PPE) và C (fire/smoke) đang tắt; fall và zone chưa được kiểm trên video có
   nhãn sự kiện.
-- **RAM tăng ~6 MB/phút trong lượt 50 phút (157 -> 543 MB), không bình nguyên: rò thật, chưa tìm ra nguồn** (`KNOWN_ISSUES.md` #27). Chưa được báo cáo là "chạy ổn định dài hạn".
+- **RAM tăng ~6 MB/phút trong lượt 50 phút (157 -> 543 MB), không bình nguyên: rò thật, chưa tìm ra nguồn** (`docs/KNOWN_ISSUES.md` #27). Chưa được báo cáo là "chạy ổn định dài hạn".
 
 ## 1. Tên đề tài (giữ, có chỉnh)
 

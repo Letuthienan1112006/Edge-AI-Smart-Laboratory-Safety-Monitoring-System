@@ -5,7 +5,7 @@
     python3 -m labsafe.app --source clip.mp4 --no-display
 
     # first live run on a real RKNN model, COCO-80 checkpoint not fine-tuned
-    # yet for this project's own classes (see KNOWN_ISSUES.md #20):
+    # yet for this project's own classes (see docs/KNOWN_ISSUES.md #20):
     python3 -m labsafe.app --source 0 --no-display --gpio off \\
         --config configs/exp/N1L_live_rknn_fp16_640.yaml \\
         --classes configs/classes_coco80.yaml \\
@@ -71,7 +71,7 @@ def camera_stats(cam: CameraSource, frames_processed: int, read_ms: list[float])
     `capture_fps` measures what the CAMERA delivered (frames_read / wall
     time since open) -- a different quantity from `fps_sustained`, which
     measures how fast the LOOP ran. `duplicate_ratio` is the bridge between
-    them: see `CameraSource.read()` and KNOWN_ISSUES.md #6.
+    them: see `CameraSource.read()` and docs/KNOWN_ISSUES.md #6.
     """
     w, h = cam.resolution
     duplicate_reads = getattr(cam, "duplicate_reads", 0)
@@ -104,7 +104,7 @@ def _duplicate_warning(cam_stats: dict, tolerance: float = 0.05) -> str | None:
     fps = cam_stats.get("capture_fps")
     return (
         f"duplicate_ratio={ratio:.2%} of processed frames were the same camera "
-        f"frame read more than once (see KNOWN_ISSUES.md #6 and "
+        f"frame read more than once (see docs/KNOWN_ISSUES.md #6 and "
         f"CameraSource.read()) -- the reported FPS is higher than real frame "
         f"throughput. Unique FPS is approximately fps * (1 - duplicate_ratio)"
         + (f"; camera capture_fps={fps}" if fps is not None else "") + "."

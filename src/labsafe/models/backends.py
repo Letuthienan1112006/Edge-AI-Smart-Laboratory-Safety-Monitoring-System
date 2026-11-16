@@ -342,7 +342,7 @@ class RKNNBackend(Backend):
         # The card is the only place that says whether this specific file
         # is safe to run at all -- checked BEFORE init_runtime touches the
         # NPU, because end2end=True is a segfault on RK3588, not a wrong
-        # answer (KNOWN_ISSUES.md #2).
+        # answer (docs/KNOWN_ISSUES.md #2).
         from .modelcard import ModelCard
 
         self.card = ModelCard.load(weights)
@@ -361,13 +361,13 @@ class RKNNBackend(Backend):
                     f"this backend always feeds letterbox(normalize=False) uint8 "
                     f"NHWC. That preprocessing is only correct for a model whose "
                     f"mean/std were baked in at convert time (input_dtype=uint8) "
-                    f"-- see KNOWN_ISSUES.md #4."
+                    f"-- see docs/KNOWN_ISSUES.md #4."
                 )
             if self.card.end2end:
                 raise ValueError(
                     f"model card says end2end=True for {weights} -- this segfaults "
                     f"on RK3588 at inference time (ultralytics issue #23753, see "
-                    f"KNOWN_ISSUES.md #2). Re-export with end2end=False before "
+                    f"docs/KNOWN_ISSUES.md #2). Re-export with end2end=False before "
                     f"using this model on the NPU."
                 )
             if self.card.class_names and list(self.card.class_names) != list(self.names):
@@ -382,7 +382,7 @@ class RKNNBackend(Backend):
                     f"fine-tuned for this project's own classes yet, run with "
                     f"`--classes configs/classes_coco80.yaml` and set "
                     f"`stage_a.keep_classes: [person]` in the pipeline config "
-                    f"(see KNOWN_ISSUES.md #20)."
+                    f"(see docs/KNOWN_ISSUES.md #20)."
                 )
         else:
             log.warning(
@@ -430,7 +430,7 @@ class RKNNBackend(Backend):
             raise RuntimeError(
                 f"unsupported RKNN outputs: {len(outputs)} tensors {shapes} with box_scale={self.box_scale}. Supported: one "
                 f"(1, 4+nc, N) tensor (card box_coords normalized|pixels), or an even number of split box/cls tensors "
-                f"with card box_coords='pixels' (scripts/export_split.py). A DFL/raw head is rejected, see KNOWN_ISSUES.md #5."
+                f"with card box_coords='pixels' (scripts/export/export_split.py). A DFL/raw head is rejected, see docs/KNOWN_ISSUES.md #5."
             )
         t3 = time.perf_counter()
         self.last_timing = {
@@ -447,7 +447,7 @@ class RKNNBackend(Backend):
         Ultralytics' RKNN INT8 export divides box coordinates by the input
         size; FP16 exports do not. Getting this wrong is silent: an INT8
         model decoded as pixels still reports correct classes and scores,
-        but every box is ~640x too small (KNOWN_ISSUES.md #24). A card that
+        but every box is ~640x too small (docs/KNOWN_ISSUES.md #24). A card that
         predates `box_coords` is refused for INT8 rather than guessed.
         """
         if card.box_coords == "normalized":
@@ -460,8 +460,8 @@ class RKNNBackend(Backend):
                     f"model card for {weights} is INT8 but has no `box_coords` field. "
                     f"Ultralytics' RKNN INT8 export normalises box coordinates by the "
                     f"input size, so decoding them as pixels gives boxes that match "
-                    f"nothing (KNOWN_ISSUES.md #24). Re-export with "
-                    f"scripts/export_rknn.py, which records box_coords."
+                    f"nothing (docs/KNOWN_ISSUES.md #24). Re-export with "
+                    f"scripts/export/export_rknn.py, which records box_coords."
                 )
             return 1.0
         raise ValueError(
@@ -475,7 +475,7 @@ class RKNNBackend(Backend):
         Call this once after building the backend, on a handful of known
         frames, before trusting the model for a full bench run. Zero here
         on frames known to contain the target class is the cheapest
-        possible early warning for KNOWN_ISSUES.md #3.
+        possible early warning for docs/KNOWN_ISSUES.md #3.
         """
         return sum(len(self(img)) for img in images)
 

@@ -78,7 +78,7 @@ cao thứ đó hơn.
 - **Structured pruning** (xóa cả kênh/filter): tensor co lại thật →
   convolution làm ít việc hơn → nhanh lên thật.
 
-Đúng trên A72, đúng trên A76, đúng trên NPU. `scripts/prune_structured.py`
+Đúng trên A72, đúng trên A76, đúng trên NPU. `scripts/train/prune_structured.py`
 **từ chối chạy** với `--unstructured` và in lý do.
 
 Lưu ý riêng cho NPU: structured pruning có thể làm số kênh lệch khỏi bội số
@@ -99,7 +99,7 @@ trước/sau mỗi bước) — giờ nó **exit 1 kèm chẩn đoán rõ ràng*
 thành công giả. Nguyên nhân gốc **chưa xác minh xong** (nghi do lệch phiên
 bản `torch`/`torch_pruning` — ultralytics tự pin `torch==2.4` cho môi
 trường RKNN cô lập của họ, khác xa `torch 2.14` mà pip resolve mặc định).
-Xem `KNOWN_ISSUES.md` #12 trước khi tin bất kỳ con số pruning nào từ
+Xem `docs/KNOWN_ISSUES.md` #12 trước khi tin bất kỳ con số pruning nào từ
 script này. **Đừng bỏ qua bảng kết quả chỉ vì nó không báo lỗi** — verify
 `p1 < p0` thật bằng mắt, không chỉ tin exit code 0.
 
@@ -199,7 +199,7 @@ chỉ latency, và theo dõi nhiệt độ.
    - Đường `rknn_model_zoo` của Rockchip cắt sâu hơn: bỏ luôn phần DFL, xuất
      3-9 nhánh reg/cls thô theo từng stride. `yolo_decode()` **không** đọc
      được dạng này — nó sẽ không crash, chỉ transpose nhầm trục và ra box
-     rác một cách im lặng (xem `KNOWN_ISSUES.md` mục 5).
+     rác một cách im lặng (xem `docs/KNOWN_ISSUES.md` mục 5).
    Dùng đường Ultralytics (`end2end=False`), không dùng đường `model_zoo`,
    trừ khi ai đó viết lại `yolo_decode()` để nhận cả hai dạng và tự nhận diện
    được dạng nào đang được đưa vào.
@@ -220,7 +220,7 @@ chỉ latency, và theo dõi nhiệt độ.
    pip cài đè). Điều thật sự đáng lo không phải TFLite, mà là việc `torch`
    có thể đổi phiên bản bất cứ lúc nào một format mới được thử — đã re-test
    RKNN + 150 test sau sự cố này, vẫn ổn, nhưng luôn re-verify RKNN sau bất
-   kỳ AutoUpdate nào. Xem `KNOWN_ISSUES.md` #14.
+   kỳ AutoUpdate nào. Xem `docs/KNOWN_ISSUES.md` #14.
 
 **Phương án dự phòng:** nếu RKNN ngốn quá 1 tuần, dừng lại. Đường
 NCNN trên 4 nhân A76 @2.4GHz đã nhanh hơn Pi 4 rất nhiều và đủ để có một hệ
@@ -253,11 +253,11 @@ một phần, thay vì một hố đen nuốt cả đồ án.
 
 | # | Công trình | Vì sao cần | Trạng thái code |
 |---|---|---|---|
-| D1 | Hinton, Vinyals & Dean, **Distilling the Knowledge in a Neural Network**, 2015 (arXiv:1503.02531) | Bài gốc — soft-target qua loss. | **Đã áp dụng thật**, `src/labsafe/models/kd_loss.py` (`KDDetectionLoss`) + `scripts/distill_kd.py`. Thích nghi cho đầu multi-label của YOLO (BCE nhiệt-độ-hoá thay vì softmax+KL của bản gốc, vì YOLO không có phân phối softmax trên lớp) — xem docstring của `kd_loss.py` để trích dẫn đúng phạm vi, đừng nói "y hệt Hinton". Verify thật 2026-09-26 (`KNOWN_ISSUES.md` #16), 9 unit test. |
+| D1 | Hinton, Vinyals & Dean, **Distilling the Knowledge in a Neural Network**, 2015 (arXiv:1503.02531) | Bài gốc — soft-target qua loss. | **Đã áp dụng thật**, `src/labsafe/models/kd_loss.py` (`KDDetectionLoss`) + `scripts/train/distill_kd.py`. Thích nghi cho đầu multi-label của YOLO (BCE nhiệt-độ-hoá thay vì softmax+KL của bản gốc, vì YOLO không có phân phối softmax trên lớp) — xem docstring của `kd_loss.py` để trích dẫn đúng phạm vi, đừng nói "y hệt Hinton". Verify thật 2026-09-26 (`docs/KNOWN_ISSUES.md` #16), 9 unit test. |
 | D2 | Chen et al., **Learning Efficient Object Detection Models with Knowledge Distillation**, NeurIPS 2017 | KD cho detection bằng feature-mimicking. | **Không áp dụng.** `KDDetectionLoss` chỉ KD nhánh classification, không khớp feature map trung gian như D2 — nói rõ trong docstring, đừng nhận đây là D2. |
 | D3 | Cao et al., **Learning Lightweight Object Detectors via Multi-Teacher Progressive Distillation**, ICML 2023 | Nhiều teacher, theo giai đoạn. | **Không áp dụng.** Chỉ 1 teacher, không có lịch trình progressive. |
 
-`scripts/distill_pseudolabel.py` là kỹ thuật KHÁC — pseudo-labeling (chuyển
+`scripts/train/distill_pseudolabel.py` là kỹ thuật KHÁC — pseudo-labeling (chuyển
 tri thức qua DATASET, một lần, offline) — không phải D1/D2/D3 (chuyển qua
 LOSS, mỗi bước, online). Hai cái bổ sung cho nhau, không thay thế nhau;
 đừng gọi pseudo-labeling là "distillation" trước hội đồng nếu không nói rõ
@@ -323,21 +323,21 @@ make roofline ARGS="--gflops 1.2 --weights-mb 6.2"
 
 # 1. Miễn phí trước: ghim nhân, rồi quét thread/imgsz
 python3 -m labsafe.optimize.affinity --benchmark
-taskset -c 4,5,6,7 python3 scripts/sweep_runtime.py --backend ncnn \
+taskset -c 4,5,6,7 python3 scripts/bench/sweep_runtime.py --backend ncnn \
         --weights <ncnn_model> --threads 1,2,3,4 --imgsz 256,320,416
 
 # 2. Quantization — giờ là bước tối ưu thật
-python3 scripts/export_models.py <best.pt> --imgsz 320 --formats tflite \
+python3 scripts/export/export_models.py <best.pt> --imgsz 320 --formats tflite \
         --int8 --data <data.yaml>
 
 # 3. Pruning + distillation
-python3 scripts/prune_structured.py --weights <best.pt> --data <data.yaml> \
+python3 scripts/train/prune_structured.py --weights <best.pt> --data <data.yaml> \
         --ratio 0.4 --steps 4
 # 3a. pseudo-label thêm dữ liệu (qua DATASET, offline) -- KHÔNG phải D1-D3
-python3 scripts/distill_pseudolabel.py --teacher yolov8m.pt \
+python3 scripts/train/distill_pseudolabel.py --teacher yolov8m.pt \
         --videos data/raw/lab_footage --out data/processed/kd
 # 3b. KD thật kiểu Hinton (qua LOSS, online) -- đây mới là D1
-python3 scripts/distill_kd.py --teacher yolo26s.pt --student yolo26n.pt \
+python3 scripts/train/distill_kd.py --teacher yolo26s.pt --student yolo26n.pt \
         --data <data.yaml> --epochs 50 --alpha 0.5 --temperature 2.0
 
 # 4. NPU (đặt hạn 1 tuần, có phương án dừng)
@@ -345,5 +345,5 @@ python3 scripts/distill_kd.py --teacher yolo26s.pt --student yolo26n.pt \
 python3 -m labsafe.app --bench --exp O7_npu3 --config configs/exp/O7_npu.yaml
 
 # 5. Đo lại toàn bộ, mAP theo từng slice
-bash scripts/bench_matrix.sh
+bash scripts/bench/bench_matrix.sh
 ```

@@ -1,6 +1,6 @@
 # Quay ở LAB cho (1) video demo dự phòng, (2) chấm nhận diện theo sự kiện, (3) dữ liệu fine-tune áo lab.
 # Cue theo giây được in lên màn hình board (kèm tiếng bíp) và ghi vào meta.json cùng số khung -> có đáp án sẵn.
-# Chạy trên board:  python3 scripts/collect_guided.py --plan configs/collection_plan_demo.yaml   (dừng labsafe-live trước: camera dùng chung)
+# Chạy trên board:  python3 scripts/data/collect_guided.py --plan configs/collection_plan_demo.yaml   (dừng labsafe-live trước: camera dùng chung)
 # A = người MẶC áo lab (cài khuy), áo trong màu tối.  B = người KHÔNG áo lab, áo màu tối.  Vùng = sàn đã dán băng keo / vùng vẽ trên dashboard.
 # Một người cũng làm được: làm lần lượt vai A rồi vai B; bỏ cảnh 07 (cần 2 người).
 batch: DM

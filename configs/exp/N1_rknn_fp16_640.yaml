@@ -1,7 +1,7 @@
 # N1: RKNN FP16 on NPU, imgsz 640, core_mask auto. THE PRODUCT PATH -- if
 # the demo has to run, it runs this (plan §2.2). See docs/experiment-ids.md.
-# MUST pass scripts/validate_conversion.py before its numbers are reported
-# (docs/rknn-pipeline.md, KNOWN_ISSUES.md #3).
+# MUST pass scripts/export/validate_conversion.py before its numbers are reported
+# (docs/rknn-pipeline.md, docs/KNOWN_ISSUES.md #3).
 # Dashboard and GPIO are off in every bench config on purpose.
 source:
   device: 0

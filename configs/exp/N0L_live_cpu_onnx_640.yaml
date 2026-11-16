@@ -1,5 +1,5 @@
 # N0L: CPU control condition for N1L -- same live-run purpose (plan §1,
-# KNOWN_ISSUES.md #20), same model family (ONNX FP32, imgsz 640, the N0
+# docs/KNOWN_ISSUES.md #20), same model family (ONNX FP32, imgsz 640, the N0
 # reference weights), but on CPU so N1L's NPU numbers can be compared
 # against something rather than assumed to be a win
 # (RKNNBackend's own docstring: "always compare against the CPU backend").

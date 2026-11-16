@@ -1,5 +1,5 @@
 # Default convert-time parameters for the RKNN export path
-# (scripts/export_rknn.py). Kept in one file so a number in the report can
+# (scripts/export/export_rknn.py). Kept in one file so a number in the report can
 # be traced back to the exact configuration that produced the .rknn file --
 # same rule as configs/exp/*.yaml.
 #
@@ -12,12 +12,12 @@ target_platform: rk3588
 imgsz: 640
 
 # end2end MUST be false: YOLO26's default end-to-end (NMS-free) head
-# segfaults at inference on RK3588 (ultralytics#23753, KNOWN_ISSUES.md #2).
+# segfaults at inference on RK3588 (ultralytics#23753, docs/KNOWN_ISSUES.md #2).
 end2end: false
 
 # RKNN bakes normalisation into the model; the runtime then expects raw
 # uint8 NHWC input (letterbox(..., normalize=False)). Get this wrong and
-# the model detects nothing with no error (KNOWN_ISSUES.md #4).
+# the model detects nothing with no error (docs/KNOWN_ISSUES.md #4).
 mean_values: [0.0, 0.0, 0.0]
 std_values: [255.0, 255.0, 255.0]
 input_dtype: uint8
@@ -25,8 +25,8 @@ layout: nhwc
 
 precisions:
   - fp16   # the product path -- see docs/experiment-ids.md N1
-  - int8   # a research question, not the default -- see N2 and KNOWN_ISSUES.md #3
+  - int8   # a research question, not the default -- see N2 and docs/KNOWN_ISSUES.md #3
 
 # INT8 calibration: must be real images, never random noise (same rule as
-# scripts/export_models.py for the TFLite path).
+# scripts/export/export_models.py for the TFLite path).
 min_calib_images: 50

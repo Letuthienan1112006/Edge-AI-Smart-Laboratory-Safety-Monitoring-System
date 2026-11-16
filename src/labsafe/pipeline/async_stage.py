@@ -12,7 +12,7 @@ The RKNN runtime releases the GIL while the NPU runs (ctypes call), so a worker 
 overlaps with the main thread. Nothing here is lock-free cleverness: one bounded queue in,
 one deque out. Jobs that arrive while the queue is full are DROPPED and counted -- an
 unbounded queue would turn a slow stage into unbounded latency and RAM growth, which is the
-failure mode this project already has once (KNOWN_ISSUES.md #27).
+failure mode this project already has once (docs/KNOWN_ISSUES.md #27).
 """
 
 from __future__ import annotations

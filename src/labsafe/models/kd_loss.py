@@ -4,7 +4,7 @@ This is the literal thing Hinton, Vinyals & Dean, *Distilling the Knowledge
 in a Neural Network* (2015, arXiv:1503.02531) describe: the student's loss
 is the task loss PLUS a term that pulls the student's own output toward the
 teacher's output on the SAME input, computed every training step. That is
-different from `scripts/distill_pseudolabel.py`, which transfers knowledge
+different from `scripts/train/distill_pseudolabel.py`, which transfers knowledge
 through the DATASET (the teacher's hard labels become training targets,
 once, offline) rather than through the loss (soft targets, every step,
 online). Both are legitimate; they are not the same technique, and a
@@ -46,7 +46,7 @@ expects.
 
 This class distills the **one2many branch only** -- the branch this
 project's own export pipeline actually ships (`export_rknn.py` forces
-`end2end=False`; `KNOWN_ISSUES.md` #2 documents `end2end=True`/the one2one
+`end2end=False`; `docs/KNOWN_ISSUES.md` #2 documents `end2end=True`/the one2one
 path as an active RK3588 segfault risk). The one2one branch keeps training
 against ground truth only, via ultralytics' own unmodified `E2ELoss`
 weighting -- KD is not applied there because that branch is never deployed
@@ -65,7 +65,7 @@ class KDDetectionLoss:
 
     Usage: build a frozen teacher `DetectionModel`, then, once the
     student's own trainer has attached `.args` to its model (see
-    `scripts/distill_kd.py`, which does this from an `on_train_start`
+    `scripts/train/distill_kd.py`, which does this from an `on_train_start`
     callback -- before that point `model.args` does not exist yet and
     `v8DetectionLoss.__init__` will fail), set:
 

@@ -172,7 +172,7 @@ class CameraSource:
         auto-exposure stretches the shutter), the same frame is handed back
         more than once. `duplicate_reads` counts that so `fps_sustained`
         can be told apart from "the loop is just spinning on stale data"
-        (a relative of KNOWN_ISSUES.md #6, which caught the same shape of
+        (a relative of docs/KNOWN_ISSUES.md #6, which caught the same shape of
         bug for an exhausted video file). This does NOT change what is
         returned -- only adding an observation, not a different capture
         policy, which is a product decision out of scope here.

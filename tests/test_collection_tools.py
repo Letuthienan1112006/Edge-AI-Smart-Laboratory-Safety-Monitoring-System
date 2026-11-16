@@ -17,7 +17,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def _run(script: str, *args: str) -> subprocess.CompletedProcess:
-    return subprocess.run([sys.executable, str(ROOT / "scripts" / script), *args],
+    return subprocess.run([sys.executable, str(ROOT / "scripts" / "data" / script), *args],
                           capture_output=True, text=True, cwd=ROOT)
 
 

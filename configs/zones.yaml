@@ -1,5 +1,5 @@
 # Restricted zones, in NORMALISED coordinates (0..1) so they survive a
-# resolution change. Build these with: python3 tools/zone_editor.py
+# resolution change. Build these with: python3 scripts/demo/zone_editor.py
 zones:
   - name: chemical_cabinet
     severity: high

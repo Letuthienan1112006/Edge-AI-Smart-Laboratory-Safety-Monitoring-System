@@ -4,7 +4,7 @@ An RKNN (or TFLite) model's correct behaviour depends on facts that live
 nowhere in the model file itself -- the mean/std used at convert time, the
 imgsz it was traced with, whether it is end-to-end. Get any of those wrong
 at load time and the failure mode is not an error, it is a model that
-quietly detects nothing (`KNOWN_ISSUES.md` #2, #4). The card is the single
+quietly detects nothing (`docs/KNOWN_ISSUES.md` #2, #4). The card is the single
 place those facts are written once, at convert time, and read once, at
 load time, so the two can never drift apart without the code refusing to
 run.
@@ -39,7 +39,7 @@ class ModelCard:
     # imgsz so boxes and class scores fit one per-tensor INT8 scale
     # (`_NormalizeCoords`, ultralytics==8.4.163 exporter.py). Decoding those
     # as pixels does not error -- it yields boxes ~640x too small that match
-    # nothing (KNOWN_ISSUES.md #24). `None` = card written before this field
+    # nothing (docs/KNOWN_ISSUES.md #24). `None` = card written before this field
     # existed; RKNNBackend refuses to guess for INT8.
     box_coords: str | None = field(default=None)
 

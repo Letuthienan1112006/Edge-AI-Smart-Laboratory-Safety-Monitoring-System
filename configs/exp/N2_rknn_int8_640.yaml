@@ -1,8 +1,8 @@
 # N2: RKNN INT8 on NPU, imgsz 640. A RESEARCH QUESTION, not the product
 # default (plan §2.2) -- ultralytics#23753 is an open bug where INT8 convert
 # succeeds but the model detects nothing. MUST pass
-# scripts/validate_conversion.py; if it fails, report the failure as
-# evidence (KNOWN_ISSUES.md #3), do not just drop N2 from the report.
+# scripts/export/validate_conversion.py; if it fails, report the failure as
+# evidence (docs/KNOWN_ISSUES.md #3), do not just drop N2 from the report.
 # Dashboard and GPIO are off on purpose.
 source:
   device: 0

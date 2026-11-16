@@ -2,8 +2,8 @@
 
 Two different machines, two different Python packages, and a gate in
 between that must never be skipped. Read this before running any of
-`scripts/export_rknn.py`, `scripts/validate_conversion.py`, or
-`scripts/bench_matrix_npu.sh`.
+`scripts/export/export_rknn.py`, `scripts/export/validate_conversion.py`, or
+`scripts/bench/bench_matrix_npu.sh`.
 
 ## 0. Two machines, two packages — do not confuse them
 
@@ -15,13 +15,13 @@ between that must never be skipped. Read this before running any of
 They are **different pip packages** with independent version numbers, and
 both must be compatible with the `librknnrt.so` baked into the board's
 image. A version mismatch produces errors that do not name the version as
-the cause — see `KNOWN_ISSUES.md` for the general shape of these
+the cause — see `docs/KNOWN_ISSUES.md` for the general shape of these
 failures. `ModelCard.toolkit_version` records what converted the model so
 this is traceable after the fact; it is not a substitute for checking
 compatibility before converting.
 
-`scripts/export_rknn.py` refuses to run on `aarch64` (convert is x86-only).
-`scripts/validate_conversion.py --candidate-backend rknn` refuses to run
+`scripts/export/export_rknn.py` refuses to run on `aarch64` (convert is x86-only).
+`scripts/export/validate_conversion.py --candidate-backend rknn` refuses to run
 anywhere except `aarch64` (RKNN inference only happens on the board). This
 means the full convert→validate cycle for a real `.rknn` file always spans
 two machines and two separate commands — there is no single-command path,
@@ -30,17 +30,17 @@ and there should not be one.
 ## 1. Convert (x86 laptop)
 
 ```bash
-python3 scripts/export_rknn.py yolo26n.pt --imgsz 640 --precision fp16 \
+python3 scripts/export/export_rknn.py yolo26n.pt --imgsz 640 --precision fp16 \
         --target rk3588 --out runs/export/
 
-python3 scripts/export_rknn.py yolo26n.pt --imgsz 640 --precision int8 \
+python3 scripts/export/export_rknn.py yolo26n.pt --imgsz 640 --precision int8 \
         --target rk3588 --data data/processed/person/data.yaml --out runs/export/
 ```
 
 Non-negotiable properties of every export produced this way:
 
 - **`end2end=False`, always.** YOLO26 defaults to an end-to-end (NMS-free)
-  head; on RK3588 that segfaults at inference (`KNOWN_ISSUES.md` #2). The
+  head; on RK3588 that segfaults at inference (`docs/KNOWN_ISSUES.md` #2). The
   script forces `end2end=False` and only accepts the opposite behind an
   explicit `--i-know-this-segfaults` acknowledgement flag.
 - **INT8 requires a real YOLO dataset YAML**, `--data <path/to/data.yaml>`
@@ -51,7 +51,7 @@ Non-negotiable properties of every export produced this way:
   (`get_int8_calibration_dataloader` → `check_det_dataset`) requires the
   YAML and reads the split from it; a directory fails deep inside
   ultralytics with a confusing error. This differs from
-  `scripts/export_models.py`'s TFLite path only in what "the calibration
+  `scripts/export/export_models.py`'s TFLite path only in what "the calibration
   data" means for each backend — TFLite there also takes a `data.yaml`,
   so the convention is consistent, the earlier draft of this doc was not.
 - **A `.card.json` sidecar is written next to the `.rknn` file**
@@ -69,7 +69,7 @@ Non-negotiable properties of every export produced this way:
 RKNN bakes normalisation into the model at convert time. The runtime then
 expects raw `uint8` NHWC input — feeding it a normalised `float32` tensor
 does not error, it just produces a model that detects nothing
-(`KNOWN_ISSUES.md` #4). `export_rknn.py` sets `mean_values=[[0,0,0]]`,
+(`docs/KNOWN_ISSUES.md` #4). `export_rknn.py` sets `mean_values=[[0,0,0]]`,
 `std_values=[[255,255,255]]` to match `letterbox(..., normalize=False)`
 in `src/labsafe/models/postprocess.py`, and writes exactly those values
 into the model card — not a hand-typed default that could drift from what
@@ -121,7 +121,7 @@ reading source: **`_collect_export()` used `Path.replace()`, which raises
 different filesystem/mount than wherever ultralytics wrote its output**
 — which is the *normal* case, since ultralytics writes beside the source
 checkpoint and ignores `--out` entirely. Fixed with `shutil.move()`. See
-`KNOWN_ISSUES.md` for the full writeup and the regression tests (all four
+`docs/KNOWN_ISSUES.md` for the full writeup and the regression tests (all four
 of the above have a positive-controlled test in
 `tests/test_export_rknn_cli.py` — reverted the fix, confirmed the test
 goes red, restored it).
@@ -146,13 +146,13 @@ ultralytics `path: <name>` convention (not a synthetic test fixture with an
 absolute `path:`): `_count_calib_images()`'s own path resolution disagreed
 with `check_det_dataset()`'s real resolution order and reported "0 images"
 for a split that genuinely had 128. Fixed in `_resolve_dataset_root()` —
-full root-cause writeup in `KNOWN_ISSUES.md` #13.
+full root-cause writeup in `docs/KNOWN_ISSUES.md` #13.
 
 **Not yet verified by any of this:** whether the exported `.rknn` actually
 *detects* anything correctly. That is exactly what the parity gate below
 exists to check, and its RKNN candidate side only runs on the board. A
 clean, zero-error export is necessary but not sufficient — see
-`KNOWN_ISSUES.md` #3 for the documented case (ultralytics#23753) where an
+`docs/KNOWN_ISSUES.md` #3 for the documented case (ultralytics#23753) where an
 INT8 RKNN export on RK3588 converts and runs fine while detecting nothing.
 
 **Verified on the board (2026-09-29):** the first INT8 export failed the
@@ -161,12 +161,12 @@ of them matching — because ultralytics' RKNN INT8 export emits box
 coordinates normalised by imgsz. The card now records `box_coords` and the
 decoder rescales; after that INT8 passes the gate (recall 1.0, precision
 0.96, IoU 0.87) at 25 ms NPU infer vs 48 ms for FP16. Full record:
-`KNOWN_ISSUES.md` #24.
+`docs/KNOWN_ISSUES.md` #24.
 
 ## 2. Validate (parity gate) — mandatory before any number is reported
 
 ```bash
-python3 scripts/validate_conversion.py \
+python3 scripts/export/validate_conversion.py \
     --reference-backend onnx    --reference-weights runs/export/yolo26n_640.onnx \
     --candidate-backend  rknn   --candidate-weights  runs/export/yolo26n_fp16_640.rknn \
     --images data/calib/ --imgsz 640 --conf 0.25 --iou 0.5 \
@@ -177,7 +177,7 @@ python3 scripts/validate_conversion.py \
 **No `.rknn` model's FPS, latency, or detection numbers may go into a
 report until this command has been run against it and printed PASS.** A
 model that converts cleanly and runs at full speed while detecting
-nothing (`KNOWN_ISSUES.md` #3) looks identical to a healthy model in every
+nothing (`docs/KNOWN_ISSUES.md` #3) looks identical to a healthy model in every
 metric except this one.
 
 - Reference and candidate are both built through `build_backend()` — no
@@ -189,7 +189,7 @@ metric except this one.
 - `--allow-fail` still runs and still writes `passed: false` to
   `parity.json`; it only changes the process exit code to 0, for the
   specific case of deliberately collecting evidence that INT8 failed (see
-  `KNOWN_ISSUES.md` #3 and the N2 experiment in `docs/experiment-ids.md`).
+  `docs/KNOWN_ISSUES.md` #3 and the N2 experiment in `docs/experiment-ids.md`).
 - RKNN inference (the candidate side, when `--candidate-backend rknn`)
   only runs on `aarch64` — i.e. on the board. Converting on x86 and
   validating on the board are two separate steps on two separate
@@ -200,7 +200,7 @@ metric except this one.
 Only after step 2 has printed PASS for a given `.rknn` file:
 
 ```bash
-bash scripts/bench_matrix_npu.sh
+bash scripts/bench/bench_matrix_npu.sh
 ```
 
 The matrix script re-runs the parity gate before each `N1`/`N2` entry and

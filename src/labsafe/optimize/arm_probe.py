@@ -259,7 +259,7 @@ def topology_verdict(info: CPUInfo) -> dict:
         return {
             "heterogeneous": False,
             "note": "uniform CPU: every core is equivalent, so thread COUNT is the only "
-                    "scheduling knob. Sweep it anyway (scripts/sweep_runtime.py).",
+                    "scheduling knob. Sweep it anyway (scripts/bench/sweep_runtime.py).",
         }
     big = info.big_cluster
     little = [c for c in info.clusters if not c.is_big]

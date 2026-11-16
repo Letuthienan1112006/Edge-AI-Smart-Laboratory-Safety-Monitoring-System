@@ -5,7 +5,7 @@ Why this exists: the dashboard only streams MJPEG (never persisted, and
 the model), so there was no way to look at what the model actually saw on
 a run that just finished, short of re-running it live with `--no-display`
 off. For a first live run on real hardware, "does detection look sane on
-an actual frame" is exactly what needs checking by eye (KNOWN_ISSUES.md
+an actual frame" is exactly what needs checking by eye (docs/KNOWN_ISSUES.md
 #3: a healthy-looking FPS number and a dead model look identical without
 this).
 """

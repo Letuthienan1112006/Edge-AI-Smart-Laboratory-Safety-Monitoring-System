@@ -1,5 +1,5 @@
-# Classes of the LAB-trained detector (what scripts/prelabel.py drafts, scripts/import_roboflow.py accepts and
-# scripts/build_lab_dataset.py writes). ORDER = class id.
+# Classes of the LAB-trained detector (what scripts/data/prelabel.py drafts, scripts/data/import_roboflow.py accepts and
+# scripts/data/build_lab_dataset.py writes). ORDER = class id.
 #   2026-10-03  dropped `goggles`: nobody wears them in this lab.
 #   2026-10-03  dropped `gloves`: all 141 labelled boxes of the first session were ONE pair lying on a table
 #               (91% at the same spot), no glove was ever worn in the data. Re-add `gloves` AT THE END once real

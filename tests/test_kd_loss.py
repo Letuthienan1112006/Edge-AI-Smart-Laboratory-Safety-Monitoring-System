@@ -1,6 +1,6 @@
 """Real unit tests for KDDetectionLoss against real torch/ultralytics
 objects -- skipped automatically where those are not installed (this
-repo's default dev environment does not carry them; see KNOWN_ISSUES.md
+repo's default dev environment does not carry them; see docs/KNOWN_ISSUES.md
 #12's note on that). Models are built from ultralytics' own packaged YAML
 configs with random init (`DetectionModel(cfg=..., nc=...)`), never a
 downloaded checkpoint, so these tests need no network and are fast.

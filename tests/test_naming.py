@@ -29,7 +29,7 @@ EXPORT_PATH = re.compile(r"runs/export/[A-Za-z0-9_.${}]+\.(?:rknn|onnx)")
 
 
 def _producible(path: str) -> bool:
-    """Could `scripts/export_rknn.py` ever have written this name?"""
+    """Could `scripts/export/export_rknn.py` ever have written this name?"""
     name = Path(path).name
     if "$" in name:            # shell-interpolated, checked separately below
         return True
@@ -55,7 +55,7 @@ def test_naming_rule_is_what_the_configs_encode():
             if isinstance(w, str) and w.startswith("runs/export/") and not _producible(w):
                 bad.append(f"{path.name}:{stage} -> {w}")
     assert not bad, (
-        "these configs point at names scripts/export_rknn.py never writes:\n  "
+        "these configs point at names scripts/export/export_rknn.py never writes:\n  "
         + "\n  ".join(bad)
     )
 
@@ -67,7 +67,7 @@ def test_matrix_script_does_not_hardcode_export_paths():
     the script was not, and nothing failed until the board was in front of
     someone.
     """
-    text = (ROOT / "scripts" / "bench_matrix_npu.sh").read_text()
+    text = (ROOT / "scripts" / "bench" / "bench_matrix_npu.sh").read_text()
     literals = [m for m in EXPORT_PATH.findall(text) if "$" not in m]
     assert not literals, (
         "hardcoded export paths in bench_matrix_npu.sh: "
@@ -79,7 +79,7 @@ def test_documented_export_command_matches_the_real_cli():
     """`weights` is positional. A documented `--weights` errors out."""
     offenders = []
     for path in list((ROOT / "configs" / "exp").glob("*.yaml")) + [
-        ROOT / "scripts" / "bench_matrix_npu.sh",
+        ROOT / "scripts" / "bench" / "bench_matrix_npu.sh",
         ROOT / "docs" / "rknn-pipeline.md",
     ]:
         if "export_rknn.py --weights" in path.read_text():

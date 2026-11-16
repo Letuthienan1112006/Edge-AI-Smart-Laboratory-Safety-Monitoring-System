@@ -43,7 +43,7 @@ class RouterStats:
     )
     # A call count alone cannot tell "200 FPS of a healthy model" apart
     # from "200 FPS of a model that converted broken and sees nothing"
-    # (KNOWN_ISSUES.md #3). These two counters make that distinction
+    # (docs/KNOWN_ISSUES.md #3). These two counters make that distinction
     # visible in every summary and every report row.
     stage_detections: dict[str, int] = field(default_factory=lambda: {"a": 0, "b": 0, "c": 0})
     stage_blank_frames: dict[str, int] = field(default_factory=lambda: {"a": 0, "b": 0, "c": 0})
@@ -76,14 +76,14 @@ class RouterStats:
     def liveness_warning(self) -> str | None:
         """A stage called a lot with zero detections is not "quiet", it is
         dead. 100 calls is enough to rule out "the object just wasn't in
-        frame yet" -- see ultralytics#23753 / KNOWN_ISSUES.md #3."""
+        frame yet" -- see ultralytics#23753 / docs/KNOWN_ISSUES.md #3."""
         if self.stage_calls["a"] >= 100 and self.stage_detections["a"] == 0:
             return (
                 "stage A called >=100 times with 0 detections -- the model may "
-                "have died after conversion (see KNOWN_ISSUES.md #3 / "
+                "have died after conversion (see docs/KNOWN_ISSUES.md #3 / "
                 "ultralytics issue #23753). Do not trust the FPS/latency numbers "
                 "in this run until this is ruled out with "
-                "scripts/validate_conversion.py."
+                "scripts/export/validate_conversion.py."
             )
         return None
 

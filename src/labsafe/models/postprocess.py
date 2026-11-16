@@ -124,13 +124,13 @@ def yolo_decode(
     `box_scale` multiplies the 4 box channels back to letterbox pixels. It is
     1.0 for any output already in pixels, and `imgsz` for an RKNN INT8 export,
     whose box coordinates Ultralytics normalises by the input size
-    (ModelCard.box_coords == "normalized", KNOWN_ISSUES.md #24).
+    (ModelCard.box_coords == "normalized", docs/KNOWN_ISSUES.md #24).
 
     This accepts output that is ALREADY through DFL and already decoded to
     per-pixel cxcywh in letterbox-image coordinates -- i.e. Ultralytics
     export with `end2end=False`. It does NOT accept `rknn_model_zoo`-style
     raw per-stride branches (pre-DFL); feeding those in used to silently
-    produce garbage boxes instead of an error (KNOWN_ISSUES.md #5), which
+    produce garbage boxes instead of an error (docs/KNOWN_ISSUES.md #5), which
     is exactly what the shape guards below exist to stop.
 
     `expect_nc`, when given, catches a mismatched checkpoint: a model
@@ -150,7 +150,7 @@ def yolo_decode(
             f"got shape {raw.shape} (ndim={raw.ndim} after squeeze). This usually "
             f"means the model was exported with multiple output branches "
             f"(rknn_model_zoo style) rather than Ultralytics end2end=False -- "
-            f"see KNOWN_ISSUES.md #5."
+            f"see docs/KNOWN_ISSUES.md #5."
         )
     # Orient to (N, 4+nc): the attribute axis is the short one.
     if arr.shape[0] < arr.shape[1]:

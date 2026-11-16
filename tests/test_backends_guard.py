@@ -152,7 +152,7 @@ def test_rknn_backend_loads_fine_without_a_card(tmp_path, mock_rknnlite, caplog)
     assert be.card is None
 
 
-# -- class-name mismatch guard, KNOWN_ISSUES.md #20 -------------------------
+# -- class-name mismatch guard, docs/KNOWN_ISSUES.md #20 -------------------------
 #
 # A COCO-80 checkpoint fed a single-class `configs/classes.yaml` used to
 # die inside `yolo_decode(..., expect_nc=1)` at warmup, well after the NPU
@@ -185,7 +185,7 @@ def test_rknn_backend_last_timing_has_three_keys_after_one_call(tmp_path, mock_r
     assert all(v >= 0 for v in be.last_timing.values())
 
 
-# -- INT8 normalised box coordinates, KNOWN_ISSUES.md #24 -------------------
+# -- INT8 normalised box coordinates, docs/KNOWN_ISSUES.md #24 -------------------
 #
 # Ultralytics' RKNN INT8 export divides box coordinates by imgsz so boxes and
 # class scores share one INT8 scale. Decoded as pixels, class and score stay

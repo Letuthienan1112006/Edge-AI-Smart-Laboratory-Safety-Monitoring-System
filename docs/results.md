@@ -1,6 +1,6 @@
 # Kết quả đã đo (tổng hợp cho báo cáo)
 
-Cập nhật 21/10/2026. Mọi số ở đây là **đo thật**; mỗi bảng ghi nguồn (mục `KNOWN_ISSUES.md` hoặc log) để kiểm lại.
+Cập nhật 21/10/2026. Mọi số ở đây là **đo thật**; mỗi bảng ghi nguồn (mục `docs/KNOWN_ISSUES.md` hoặc log) để kiểm lại.
 Phần cứng: Orange Pi 5 (RK3588S, 8 GB), NPU RKNPU2, camera Logitech C270 640x480. Model: YOLO26n.
 Mục cuối liệt kê những gì **chưa** đo — đừng viết chúng như đã làm.
 
@@ -59,7 +59,7 @@ Bài học đo lường: tập test cùng phiên cho điểm cao giả (0,99 so 
 ## 5. Độ chính xác trên tập test thật (phiên riêng, người model chưa thấy)
 
 Luật "vùng nguy hiểm phải mặc áo lab", chấm theo **từng người**, ngưỡng áo 0,6, trung bình 3 lần train (seed 0/1/2).
-`scripts/eval_zone_rule.py`, log `runs/logs/eval_v5.txt`.
+`scripts/eval/eval_zone_rule.py`, log `runs/logs/eval_v5.txt`.
 
 | | Góc 1: bắt người không áo | Góc 1: báo nhầm người có áo | Góc 2: phát hiện người AP50 | Góc 2: bắt không áo | Góc 2: báo nhầm |
 |---|---|---|---|---|---|
@@ -76,7 +76,7 @@ Luật "vùng nguy hiểm phải mặc áo lab", chấm theo **từng người**
 
 ## 5b. So sánh kiến trúc detector (16/10): cùng dữ liệu, cùng công thức, 3 seed mỗi bên
 
-Dữ liệu `lab_v6` (1.638 ảnh), 60 epoch, ảnh 640, batch 16, công thức mặc định; chấm bằng `scripts/eval_ap.py` (một bộ chấm
+Dữ liệu `lab_v6` (1.638 ảnh), 60 epoch, ảnh 640, batch 16, công thức mặc định; chấm bằng `scripts/eval/eval_ap.py` (một bộ chấm
 chung, FP32/PyTorch) trên hai tập test khác phiên. Trung bình 3 seed, khoảng min-max trong ngoặc. Log `runs/cmp/`.
 
 | Model | Tham số | Góc 1 mAP50 | Góc 1 mAP50-95 | Góc 2 mAP50 | Góc 2 mAP50-95 |
@@ -95,7 +95,7 @@ chung, FP32/PyTorch) trên hai tập test khác phiên. Trung bình 3 seed, kho�
 
 ## 5c. Lỗi nằm ở đâu: điểm theo lát cắt, có khoảng tin cậy 95% (16/10)
 
-`scripts/eval_slices.py`, model `lab_v6` (seed 0, FP32), gộp hai tập test khác phiên (299 ảnh, 1.724 người, 1.145 áo).
+`scripts/eval/eval_slices.py`, model `lab_v6` (seed 0, FP32), gộp hai tập test khác phiên (299 ảnh, 1.724 người, 1.145 áo).
 Ngưỡng như khi triển khai: người 0,4, áo 0,6, IoU 0,5. Khoảng tin cậy lấy bằng bootstrap theo ẢNH (1.000 lần lấy mẫu lại).
 
 | Lát cắt | Recall người | Recall áo | Precision người | Precision áo |
@@ -126,8 +126,8 @@ Ngưỡng như khi triển khai: người 0,4, áo 0,6, IoU 0,5. Khoảng tin c�
 
 Mọi số ở §5, §5b, §5c là **FP32**. Bản INT8 xuất theo cách của Ultralytics (một tensor `[1,6,8400]` chứa cả tọa độ khung và điểm lớp,
 dùng chung một thang 8 bit) mất ~19 điểm mAP50-95 vì mép khung bị lượng tử hóa ~2,7 px. **Đã sửa** bằng xuất đầu ra tách
-(`scripts/export_split.py`: 6 tensor, mỗi scale một cặp khung/điểm lớp; giải mã trên CPU bằng `postprocess.assemble_split_outputs`).
-Chấm bằng `scripts/eval_ap.py` trên NPU (lõi 0), trung bình 3 seed ± độ lệch chuẩn, hiệu chuẩn 300 ảnh. Log `runs/split_eval/`.
+(`scripts/export/export_split.py`: 6 tensor, mỗi scale một cặp khung/điểm lớp; giải mã trên CPU bằng `postprocess.assemble_split_outputs`).
+Chấm bằng `scripts/eval/eval_ap.py` trên NPU (lõi 0), trung bình 3 seed ± độ lệch chuẩn, hiệu chuẩn 300 ảnh. Log `runs/split_eval/`.
 
 | Cấu hình (YOLO26n, lab_v6) | Góc 1 mAP50 | Góc 1 mAP50-95 | Góc 2 mAP50 | Góc 2 mAP50-95 |
 |---|---|---|---|---|
@@ -143,18 +143,18 @@ Chấm bằng `scripts/eval_ap.py` trên NPU (lõi 0), trung bình 3 seed ± đ�
   81% / 75% / 86%, báo nhầm 8% / 7% / 9%; góc 2 bắt 86% / 90% / 89%, báo nhầm 10-11%; áo thun trắng bị gọi là áo lab 1-3/20.
   Nằm trong mức nhiễu so với FP32 (§5): INT8 không làm luật vùng kém đi.
 - **416 kém rõ** (-2,7 điểm mAP50 ở góc 1). **512 ngang 640 về mAP50**, kém ~1,4 điểm mAP50-95 ở góc 2 (ngoài mức nhiễu).
-- Độ trễ (cả lời gọi backend: tiền xử lý + NPU + giải mã), `scripts/bench_backend_latency.py`, board rảnh (dịch vụ live tắt), xung mặc định, 3 vòng đan xen,
+- Độ trễ (cả lời gọi backend: tiền xử lý + NPU + giải mã), `scripts/bench/bench_backend_latency.py`, board rảnh (dịch vụ live tắt), xung mặc định, 3 vòng đan xen,
   `runs/lat_pinned/default.json`: **640 p50 25,9 ms (p95 38-44, p99 47-53); 512 p50 18,4 ms (p95 23-28, p99 35-36)**; NPU 1000 MHz, DDR 1068 MHz, CPU 2,35 GHz cả hai.
   512 nhanh hơn ~7,4 ms (29%), nhất quán. (Các lần đo trước dao động 5-7 ms vì còn tiến trình khác chạy trên board.)
-- **Khóa toàn bộ xung** (CPU/DDR/NPU/GPU `performance`, `scripts/bench_pinned.sh`, `runs/lat_pinned/pinned.json`, 3 vòng đan xen): **640 p50 23,4 ms, p95 24,3-24,6, p99 24,9-25,2; 512 p50 16,5 ms, p95 16,8-17,0, p99 16,8-17,9** (DDR 2112 MHz).
+- **Khóa toàn bộ xung** (CPU/DDR/NPU/GPU `performance`, `scripts/bench/bench_pinned.sh`, `runs/lat_pinned/pinned.json`, 3 vòng đan xen): **640 p50 23,4 ms, p95 24,3-24,6, p99 24,9-25,2; 512 p50 16,5 ms, p95 16,8-17,0, p99 16,8-17,9** (DDR 2112 MHz).
   So với xung mặc định: p99 của 640 từ 46-53 ms xuống 25 ms, p99 của 512 từ 35-41 xuống 17 ms; p50 chỉ giảm 2,6 ms (640) và 1,9-3,6 ms (512, tùy lần đo mặc định). Ở xung mặc định DDR nằm ở 1068 MHz và có vòng tụt xuống 528 MHz
   (512 vòng 3: p50 22,8 ms), NPU (1000 MHz) và CPU (2,35 GHz) đã ở trần. **Vậy nguyên nhân dao động độ trễ là xung DDR (`dmc_ondemand`), không phải NPU/CPU/nhiệt**: khóa DDR làm đuôi độ trễ (p95/p99) gần như phẳng.
   Chênh 512 so với 640 không đổi khi khóa xung (-6,9 ms, -30%), nên kết luận 512/640 ở trên vẫn đúng. Nhiệt cuối đo 40,7-46,2 °C (tăng dần theo từng vòng, chưa bão hòa; mỗi vòng ~1 phút).
   Chưa đo: ảnh hưởng lên FPS/p99 end-to-end của cả hệ thống, và chi phí điện/nhiệt khi giữ DDR ở 2112 MHz liên tục.
-- Đổi lại ở INT8 (3 seed, `scripts/eval_slices.py --backend rknn`, `runs/slices_int8/`): recall người xa (cao < 188 px) **0,795 -> 0,782** (-1,3 điểm),
+- Đổi lại ở INT8 (3 seed, `scripts/eval/eval_slices.py --backend rknn`, `runs/slices_int8/`): recall người xa (cao < 188 px) **0,795 -> 0,782** (-1,3 điểm),
   recall áo 0,877 -> 0,864, độ chính xác áo 0,898 -> 0,924, recall người chung 0,914 -> 0,911; mAP50-95 góc 2 kém 1,4 điểm.
   Camera giới hạn 30 FPS nên 512 **không** tăng FPS; lợi ích chỉ là tải NPU, nhiệt, p99. Quyết định: giữ **640** mặc định, 512 là tùy chọn tiết kiệm
-  (đổi `weights`/`imgsz` trong config); chưa đo công suất/nhiệt dài hạn và bản khóa xung (`scripts/bench_pinned.sh`).
+  (đổi `weights`/`imgsz` trong config); chưa đo công suất/nhiệt dài hạn và bản khóa xung (`scripts/bench/bench_pinned.sh`).
 - Đã thử mà KHÔNG giúp (một tensor): thuật toán KL, hybrid, auto-hybrid, hiệu chuẩn 300 so với 1.400 ảnh; FP16 trên NPU không mất gì nhưng chậm (52 ms).
 
 **Bộ ảnh hiệu chuẩn (16/10, 1 model `lab_v6` seed 0, 640 đầu ra tách, đo trên NPU lõi 1; `runs/calib_eval/`):**
@@ -199,7 +199,7 @@ hạ xung (mỗi lần suy luận 30 ms thay vì 25 ms); cố định xung thì 
 ## 6c. Khóa riêng xung DDR, đo cả hệ thống (16/10)
 
 Chế độ adaptive, model INT8 đầu ra tách 640, tầng B/C bất đồng bộ, video phát lại 30 FPS, 3 vòng đan xen x 240 s, chỉ khác governor `dmc`
-(`scripts/ddr_ab_board.sh`, `runs/ddr_ab-20261016-150903/`, tổng hợp `scripts/ddr_ab_summary.py`). Các xung khác để mặc định.
+(`scripts/bench/ddr_ab_board.sh`, `runs/ddr_ab-20261016-150903/`, tổng hợp `scripts/bench/ddr_ab_summary.py`). Các xung khác để mặc định.
 
 | `dmc` | FPS bền | độ trễ vòng lặp p50 | p99 | max | CPU % | nhiệt cuối |
 |---|---|---|---|---|---|---|
@@ -215,7 +215,7 @@ Chế độ adaptive, model INT8 đầu ra tách 640, tầng B/C bất đồng b
 ## 6d. Vẽ hình cho dashboard: `video_fps` 0 so với 15 (16/10, KNOWN_ISSUES #45)
 
 Chế độ live (dashboard bật, một người xem kết nối luồng hình), cùng video phát lại 30 FPS, DDR khóa `performance` cả hai bên, 3 vòng đan xen x 120 s
-(`scripts/video_fps_ab_board.py`, `runs/video_fps_ab-20261016-155047/`; `video_fps` 0 = vẽ + nén JPEG mọi khung, 15 = tối đa 15 lần/giây):
+(`scripts/bench/video_fps_ab_board.py`, `runs/video_fps_ab-20261016-155047/`; `video_fps` 0 = vẽ + nén JPEG mọi khung, 15 = tối đa 15 lần/giây):
 
 | `dashboard.video_fps` | FPS bền (3 vòng) | CPU tiến trình |
 |---|---|---|
@@ -226,7 +226,7 @@ Chế độ live (dashboard bật, một người xem kết nối luồng hình)
 - **Vẫn chưa tới 29 FPS** của bench replay không dashboard (§6c): ở chế độ live còn ~3 FPS bị mất vào việc khác (tổng hợp trạng thái, luồng HTTP, ảnh bằng chứng...), chưa tìm ra phần nào.
   Chưa profile. 26 FPS vẫn đủ cho luật vùng (debounce 3 s), nhưng thấp hơn trần camera 30 FPS.
 
-## 6e. RAM qua đêm, dịch vụ `labsafe-live` (16-17/10, `runs/ramlog/ram-boot001.csv`, `ram-boot002.csv`, tổng hợp `scripts/ram_summary.py`)
+## 6e. RAM qua đêm, dịch vụ `labsafe-live` (16-17/10, `runs/ramlog/ram-boot001.csv`, `ram-boot002.csv`, tổng hợp `scripts/board/ram_summary.py`)
 
 Board bật 19:22, chạy 10 giờ 14 phút liên tục, ghi mỗi 60 s (PSS mỗi 15 phút) bằng logger ngoài tiến trình. Camera ở phòng tối: FPS camera ~15 cả đêm (trung vị 14,9-15,0), nên FPS không phải thước đo ở đây.
 
@@ -244,7 +244,7 @@ Board bật 19:22, chạy 10 giờ 14 phút liên tục, ghi mỗi 60 s (PSS m�
 - **Cảnh báo qua đêm không phải phép đo báo giả:** 266 ảnh bằng chứng trong 10 giờ (97 + 169), mẫu 12 ảnh cho thấy người nằm ngủ trên sàn trong vùng cấm, không mặc áo: là phát hiện đúng theo luật. ~400 mã track chỉ trong 4 giờ
   và cooldown tính theo mã track nên một người nằm yên bị báo lại mỗi phút. Có một cảnh báo té ngã `still_down` lúc 05:22 (người nằm): chưa kiểm là đúng hay sai.
 
-## 6f. Cảnh báo theo SỰ KIỆN trên video quay có kịch bản (17/10, phòng nhà, `scripts/eval_events.py`, `runs/events/home_grid.json`, `home_partial.json`)
+## 6f. Cảnh báo theo SỰ KIỆN trên video quay có kịch bản (17/10, phòng nhà, `scripts/eval/eval_events.py`, `runs/events/home_grid.json`, `home_partial.json`)
 
 5 cảnh (`EV_01,02,03,05,06`), 1 người (áo lab 2), 30 FPS, tổng 8 phút, đáp án là cue theo giây ghi cùng chỉ số khung. Detector chạy một lần, chuỗi quyết định phát lại cho từng cấu hình trên giờ mô phỏng.
 Chỉ tính cảnh báo vùng áo lab (không đo té ngã). 7 vi phạm kỳ vọng (người không áo ở trong vùng >= 4 s). **Dữ liệu nhỏ: 7 sự kiện, 8 phút, một người, một phòng nhà; số báo giả mỗi giờ chỉ để so sánh giữa cấu hình, không phải số để công bố.**
@@ -283,7 +283,7 @@ Dịch vụ `labsafe-live` (cấu hình mới: `RuntimeMaxSec=24h`, log riêng, 
 
 ## 6h. Chỉ phán áo khi thấy được quần áo (21/10, KNOWN_ISSUES #50)
 
-`zones.visibility` = {min_h 0,22, tall_aspect 2, min_w_px 24, max_occlusion 0,4}. FP32 `lab_v6`, ngưỡng áo 0,6, `scripts/eval_zone_rule.py --vis`, log `runs/vis/run.log`.
+`zones.visibility` = {min_h 0,22, tall_aspect 2, min_w_px 24, max_occlusion 0,4}. FP32 `lab_v6`, ngưỡng áo 0,6, `scripts/eval/eval_zone_rule.py --vis`, log `runs/vis/run.log`.
 
 | Tập | quy tắc | người được chấm | bắt người không áo | người có áo bị báo nhầm |
 |---|---|---|---|---|
@@ -335,7 +335,7 @@ Sau khi đặt camera về khung hình giống dữ liệu huấn luyện: bo m�
 
 Hạn chế: một phiên, 25 giây, sáu người, các lần thăm dò cách 0,4 s nên không độc lập; không có đáp án gán tay; KHÔNG phải độ chính xác. Dùng để kết luận lỗi nằm ở góc camera, không phải ngưỡng.
 
-## 6j. Độ tin cậy của việc "đã vào vùng" (điểm chân), 24/10, `scripts/eval_zone_foot.py`
+## 6j. Độ tin cậy của việc "đã vào vùng" (điểm chân), 24/10, `scripts/eval/eval_zone_foot.py`
 
 Tập `boot014test` (phiên khác lúc huấn luyện, góc 1), vùng `configs/zones_lab.yaml` (vẽ trên góc boot014), model `lab_v6` FP32, ngưỡng người 0,4. Mỗi người có nhãn tay được ghép với khung dự đoán có IoU >= 0,5; so quyết định "chân trong vùng" của khung dự đoán với của khung nhãn tay.
 
@@ -350,9 +350,9 @@ Tập `boot014test` (phiên khác lúc huấn luyện, góc 1), vùng `configs/z
 
 Hạn chế: chuẩn so sánh là đáy khung NHÃN TAY chứ không phải điểm chạm sàn thật, nên chân bị bàn/người che không bị phạt; mỗi ảnh xét riêng (không có chống rung, bộ bám); một vùng, một góc; tập chủ yếu là người trong vùng (454/550). Kết luận dùng được: quyết định ổn khi chân cách mép vùng hơn khoảng 30 px; sát mép thì có thể đổi qua lại (trong dịch vụ thật có chống rung 3 s + ân hạn 1 s làm dịu).
 
-## 6k. Công suất điện bo mạch, 29/10, `scripts/energy_session.py`, `docs/energy-2026-10-29/`
+## 6k. Công suất điện bo mạch, 29/10, `scripts/bench/energy_session.py`, `docs/energy-2026-10-29/`
 
-Đồng hồ USB-C KWS-1902C giữa bộ sạc và bo mạch; số mWh cộng dồn đọc ở đầu/cuối mỗi pha (người gõ). Kiểm đồng hồ trước (`scripts/meter_check.py`): nghỉ 73 s = 3,54 W = V×A; tải CPU hết công suất: 3,2 → 8,3 W hiển thị. Số W hiển thị thấp hơn V×A khoảng 10--13%, số cộng dồn khớp V×A, nên sai số tuyệt đối khoảng ±10%, so sánh tương đối đáng tin hơn.
+Đồng hồ USB-C KWS-1902C giữa bộ sạc và bo mạch; số mWh cộng dồn đọc ở đầu/cuối mỗi pha (người gõ). Kiểm đồng hồ trước (`scripts/bench/meter_check.py`): nghỉ 73 s = 3,54 W = V×A; tải CPU hết công suất: 3,2 → 8,3 W hiển thị. Số W hiển thị thấp hơn V×A khoảng 10--13%, số cộng dồn khớp V×A, nên sai số tuyệt đối khoảng ±10%, so sánh tương đối đáng tin hơn.
 
 | Pha | Thời gian | Công suất TB | Trên mức nghỉ | FPS (capture_fps) | mJ/khung |
 |---|---|---|---|---|---|

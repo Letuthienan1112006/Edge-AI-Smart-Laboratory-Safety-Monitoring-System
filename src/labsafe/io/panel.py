@@ -8,7 +8,7 @@
 
 Pins are given as in the Orange Pi pinout, e.g. `GPIO4_B2` (bank 4, group B, index 2 -> chip label "gpio4", line 10); the chip is found by its
 label, because /dev/gpiochipN numbering is not stable. Needs libgpiod (python3-gpiod 1.x or 2.x) and read/write access to /dev/gpiochip* and
-/dev/i2c-N (deploy/99-labsafe-io.rules + scripts/setup_panel_board.sh). The OLED is driven directly through /dev/i2c-N (SSD1306 / SH1106,
+/dev/i2c-N (deploy/99-labsafe-io.rules + scripts/board/setup_panel_board.sh). The OLED is driven directly through /dev/i2c-N (SSD1306 / SH1106,
 128x64) with Pillow for the Vietnamese text: no extra Python package.
 
 Never touches the frame loop's timing: update() stores a few numbers; a thread does all the GPIO / I2C work. Any failure (no permission,
@@ -94,7 +94,7 @@ class Gpio:
                 label = c.label() if hasattr(c, "label") and callable(c.label) else c.get_info().label
             except Exception as e:  # noqa: BLE001
                 if isinstance(e, PermissionError) or "ermission" in str(e):
-                    raise PermissionError(f"{path}: no permission (run scripts/setup_panel_board.sh once, then re-login/reboot)") from None
+                    raise PermissionError(f"{path}: no permission (run scripts/board/setup_panel_board.sh once, then re-login/reboot)") from None
                 continue
             chips[label] = (c, path)
         self._v2 = hasattr(gpiod, "request_lines")

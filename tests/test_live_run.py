@@ -1,14 +1,14 @@
 """Tests for the board-first-live-run additions:
 
   * `keep_classes` filtering on `Backend` (COCO-80 checkpoint, project
-    cares about `person` only -- KNOWN_ISSUES.md #20)
+    cares about `person` only -- docs/KNOWN_ISSUES.md #20)
   * per-stage timing breakdown (`Backend.last_timing`,
     `RouterStats.stage_a_breakdown_ms`)
-  * `CameraSource.duplicate_reads` (a relative of KNOWN_ISSUES.md #6)
+  * `CameraSource.duplicate_reads` (a relative of docs/KNOWN_ISSUES.md #6)
   * `FrameSaver`
   * `app.camera_stats` / `app._duplicate_warning`
   * `app.main` end to end with a fake camera (bench save-frames path, and
-    the live-mode KeyboardInterrupt -> JSON-summary fix, KNOWN_ISSUES.md
+    the live-mode KeyboardInterrupt -> JSON-summary fix, docs/KNOWN_ISSUES.md
     plan §2.5)
 
 None of this needs a board, a real camera, or `rknnlite` -- the RKNN-card

@@ -1,4 +1,4 @@
-"""Argument validation for `scripts/export_rknn.py` -- no real export runs
+"""Argument validation for `scripts/export/export_rknn.py` -- no real export runs
 here, and neither `ultralytics` nor `rknn-toolkit2` needs to be installed.
 `validate_args()` must reject bad invocations before anything expensive
 (or architecture-incompatible) is attempted.
@@ -11,7 +11,7 @@ from pathlib import Path
 
 import pytest
 
-SCRIPTS_DIR = Path(__file__).resolve().parents[1] / "scripts"
+SCRIPTS_DIR = Path(__file__).resolve().parents[1] / "scripts" / "export"
 spec = importlib.util.spec_from_file_location("export_rknn", SCRIPTS_DIR / "export_rknn.py")
 export_rknn = importlib.util.module_from_spec(spec)
 sys.modules["export_rknn"] = export_rknn
@@ -28,7 +28,7 @@ def _make_data_yaml(tmp_path, n_val_images: int, split: str = "val") -> "pathlib
     """A minimal YOLO dataset YAML + a populated split dir, matching what
     ultralytics' check_det_dataset() actually expects -- NOT a bare
     directory of images (that was this script's original, unverified
-    assumption; see KNOWN_ISSUES.md and docs/rknn-pipeline.md)."""
+    assumption; see docs/KNOWN_ISSUES.md and docs/rknn-pipeline.md)."""
     split_dir = tmp_path / split
     split_dir.mkdir(parents=True, exist_ok=True)
     for i in range(n_val_images):

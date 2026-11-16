@@ -1,9 +1,9 @@
 # DEMO PROFILE (21/10): same as dashboard_lab_board.yaml but coat threshold 0.5 and coat memory 3 s, for a live demo in an unfamiliar room
 # (home recordings: coat box >= 0.6 in only 27-35% of frames, gaps up to 4.3 s). NOT the measured default; try it on site first.
 # Live (board): web dashboard, lab model lab_v6 INT8 on NPU core 0, fire/smoke INT8 on core 2 (async), whole-floor
-# zone requiring a lab coat. Started by `make dashboard` from the laptop (scripts/dashboard.sh), reached through an
+# zone requiring a lab coat. Started by `make dashboard` from the laptop (scripts/board/dashboard.sh), reached through an
 # SSH tunnel at http://localhost:8000 -- bound to 127.0.0.1 on the board on purpose (the page shows people).
-# PARITY: lab_v6_split_int8_640.rknn must pass scripts/validate_conversion.py on the board before its numbers count.
+# PARITY: lab_v6_split_int8_640.rknn must pass scripts/export/validate_conversion.py on the board before its numbers count.
 affinity: {cpus: big}
 source: {device: 0, width: 640, height: 480, fps: 30}
 stage_a:
@@ -44,7 +44,7 @@ fall: {enabled: false, aspect_ratio_threshold: 1.15, center_drop_ratio: 0.18, dr
 # they show what is happening in the current frame.
 alerts: {debounce_s: 3.0, cooldown_s: 60.0, grace_s: 1.0, gpio: 'off'}
 # LED + OLED on the 26-pin header (physical pin -> SoC pin): green 11 = GPIO4_B2, yellow 13 = GPIO4_B3, red 15 = GPIO0_D4;
-# OLED SCL = pin 5, SDA = pin 3 (I2C5, needs `overlays=i2c5-m3` in /boot/orangepiEnv.txt: scripts/setup_panel_board.sh).
+# OLED SCL = pin 5, SDA = pin 3 (I2C5, needs `overlays=i2c5-m3` in /boot/orangepiEnv.txt: scripts/board/setup_panel_board.sh).
 # Missing wiring / permission only logs a warning. States as on the web page: green AN TOÀN, yellow CHÚ Ý / MẤT TÍN HIỆU, red BÁO ĐỘNG.
 panel:
   enabled: true
@@ -52,7 +52,7 @@ panel:
   active_high: true       # LED anode on the pin, cathode through a resistor to GND; false if the LED is wired to 3.3V
   hold_s: 10              # stay yellow this long after an alarm ends
   oled: {enabled: true, i2c_controller: fead0000, address: 0x3C, driver: ssd1306, rotate: 0}
-# phone message (Zalo Bot) when an alarm fires; inactive until secrets/zalo.json exists (scripts/zalo_setup.py), picked up without a restart.
+# phone message (Zalo Bot) when an alarm fires; inactive until secrets/zalo.json exists (scripts/board/zalo_setup.py), picked up without a restart.
 # Several alarms within min_interval_s become one message.
 notify: {enabled: true, channel: zalo, secret_file: secrets/zalo.json, kinds: [zone_ppe_violation], min_interval_s: 10}
 # photo of each person behind an alarm -> <run dir>/violations/ (crop + annotated frame + violations.jsonl)

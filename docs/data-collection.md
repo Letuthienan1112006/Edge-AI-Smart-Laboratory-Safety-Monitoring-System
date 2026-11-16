@@ -29,11 +29,11 @@ make fetch-sessions    # kéo ảnh về laptop để xử lý
 
 ## 1. Quay (chạy TRÊN BOARD, có hướng dẫn từng cảnh)
 ```bash
-ssh -t orangepi-lan 'cd ~/AI_Challenge && python3 scripts/collect_guided.py'
+ssh -t orangepi-lan 'cd ~/AI_Challenge && python3 scripts/data/collect_guided.py'
 ```
 16 cảnh, ~12 phút quay (kịch bản: `configs/collection_plan.yaml`). Mỗi cảnh in việc cần làm, chờ Enter,
 đếm ngược 5 giây rồi quay. Ctrl+C dừng; chạy lại sẽ **tiếp tục** từ cảnh chưa quay (cảnh hỏng được quay
-lại). Xem tiến độ: `python3 scripts/collect_guided.py --list`. Chỉ quay vài cảnh: `--only 06,08`.
+lại). Xem tiến độ: `python3 scripts/data/collect_guided.py --list`. Chỉ quay vài cảnh: `--only 06,08`.
 Cảnh 15, 16 cần **người khác** (không phải bạn) để làm tập test.
 
 ## 2. Kéo về, cắt ảnh, gợi ý nhãn (chạy trên LAPTOP)
@@ -57,9 +57,9 @@ make import-roboflow ZIP=~/Downloads/<ten>.zip        # thêm MERGE=1 để gộ
 ```
 Lệnh này đổi lớp theo TÊN về thứ tự của dự án, khôi phục tên file gốc và tên phiên, bỏ chia tập của Roboflow, chuyển polygon thành khung, loại bản augment trùng, rồi ghi vào `data/labeled/<phiên>/`. Nó dừng nếu gặp tên lớp lạ.
 
-### 3c. Lô gán nhãn tiếp theo (đã có model): `scripts/make_batch.py`
+### 3c. Lô gán nhãn tiếp theo (đã có model): `scripts/data/make_batch.py`
 ```bash
-.venv/bin/python scripts/make_batch.py --session boot006 --n 250 \
+.venv/bin/python scripts/data/make_batch.py --session boot006 --n 250 \
     --weights /mnt/big/AGV_ANLEE/weights/lab_v1_pilot_best.pt --out data/interim/roboflow_upload/boot006_b2
 ```
 Chọn các ảnh KHÁC NHAU NHẤT trong số chưa gán (không dựa vào đầu ra model; lô đầu ưu tiên "ảnh có găng" nên lệch,
@@ -70,14 +70,14 @@ Chọn các ảnh KHÁC NHAU NHẤT trong số chưa gán (không dựa vào đ�
 ```bash
 make build-lab-dataset     # -> data/processed/lab_v1, từ chối nếu thiếu nhãn / sai mã lớp / test rỗng
 # CHỈ có một phiên (thử nghiệm sơ bộ)? Khối cuối của phiên làm test (số đo LẠC QUAN, không báo cáo như khả năng tổng quát):
-.venv/bin/python scripts/build_lab_dataset.py --pilot-time-holdout 0.2
-.venv/bin/python scripts/verify_dataset.py data/processed/lab_v1/data.yaml --crops 8   # XEM crop bằng mắt
+.venv/bin/python scripts/data/build_lab_dataset.py --pilot-time-holdout 0.2
+.venv/bin/python scripts/data/verify_dataset.py data/processed/lab_v1/data.yaml --crops 8   # XEM crop bằng mắt
 ```
 ## 5. Train rồi đo trên tập test của lab
 ```bash
-.venv/bin/python scripts/train_baseline.py --data data/processed/lab_v1/data.yaml \
+.venv/bin/python scripts/train/train_baseline.py --data data/processed/lab_v1/data.yaml \
     --model /mnt/big/AGV_ANLEE/weights/yolo26n.pt --imgsz 640 --epochs 80 --name lab_v1
 ```
 Báo cáo **AP theo từng khoảng cách (cảnh 02/07/10 so với 06/08/11)** và theo từng lớp; so với model gốc
-trên cùng tập test. Xuất RKNN INT8 chỉ sau khi qua cổng parity (`scripts/export_rknn.py`, rồi
-`scripts/validate_conversion.py` trên board).
+trên cùng tập test. Xuất RKNN INT8 chỉ sau khi qua cổng parity (`scripts/export/export_rknn.py`, rồi
+`scripts/export/validate_conversion.py` trên board).

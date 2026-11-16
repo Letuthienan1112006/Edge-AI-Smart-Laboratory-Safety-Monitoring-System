@@ -1,7 +1,7 @@
 """Tests for the conversion parity gate -- the highest-priority module in
 this round. `test_zero_detection_collapse_is_named` is the single most
 important test in the whole repo right now: it is the one that catches a
-model that converts cleanly and then detects nothing (KNOWN_ISSUES.md #3).
+model that converts cleanly and then detects nothing (docs/KNOWN_ISSUES.md #3).
 """
 from __future__ import annotations
 

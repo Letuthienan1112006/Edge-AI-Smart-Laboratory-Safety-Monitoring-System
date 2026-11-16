@@ -1,5 +1,5 @@
 # /etc/systemd/system/labsafe-live.service -- the lab safety system as a long-running service on the Orange Pi.
-# Installed by scripts/install_live_service.sh (needs sudo). Dashboard stays bound to 127.0.0.1:8000 (SSH tunnel: make dashboard-tunnel).
+# Installed by scripts/board/install_live_service.sh (needs sudo). Dashboard stays bound to 127.0.0.1:8000 (SSH tunnel: make dashboard-tunnel).
 [Unit]
 Description=Lab Safety Edge AI (live system: detector on NPU, zone rule, dashboard)
 After=network.target
@@ -16,7 +16,7 @@ Environment=PYTHONPATH=src
 # which costs ~2 FPS and the latency tail. `+` = run as root although User=orangepi. Restored when the service stops.
 ExecStartPre=+/bin/sh -c 'echo performance > /sys/class/devfreq/dmc/governor'
 ExecStopPost=+/bin/sh -c 'echo dmc_ondemand > /sys/class/devfreq/dmc/governor'
-# which config runs: standard by default; `bash scripts/live_config.sh demo|standard` writes live.env (owned by orangepi, so switching
+# which config runs: standard by default; `bash scripts/board/live_config.sh demo|standard` writes live.env (owned by orangepi, so switching
 # needs no edit of this root-owned unit, only a restart). The file's value wins over Environment=.
 Environment=LABSAFE_CONFIG=configs/live/dashboard_lab_board.yaml
 EnvironmentFile=-/home/orangepi/AI_Challenge/live.env
